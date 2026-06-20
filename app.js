@@ -957,6 +957,32 @@ const docxUploadStatus = document.getElementById('docx-upload-status');
 const parsedQuestionsJson = document.getElementById('parsed-questions-json');
 const filterExamGrade = document.getElementById('filter-exam-grade');
 
+let docxTargetExamId = null;
+
+window.triggerDocxUploadForExam = function(examId) {
+  docxTargetExamId = examId;
+  if (docxFileInput) {
+    docxFileInput.value = '';
+    docxFileInput.click();
+  }
+};
+
+window.triggerEditQuestionsForExam = async function(examId) {
+  try {
+    const exams = await dbManager.getExams();
+    const exam = exams.find(e => e.examId === examId);
+    if (exam) {
+      docxTargetExamId = examId;
+      currentParsedQuestions = exam.questions || [];
+      openDocxPreviewModal();
+    } else {
+      showNotification("ไม่พบวิชาดังกล่าวเพื่อแก้ไขข้อสอบ", true);
+    }
+  } catch (err) {
+    showNotification("ไม่สามารถดึงข้อมูลข้อสอบได้: " + err.message, true);
+  }
+};
+
 filterExamGrade.addEventListener('change', () => loadAdminExamsList());
 document.getElementById('filter-exam-year').addEventListener('change', () => loadAdminExamsList());
 document.getElementById('filter-exam-term').addEventListener('change', () => loadAdminExamsList());
@@ -1107,7 +1133,7 @@ document.getElementById('btn-close-docx-modal').addEventListener('click', () => 
 });
 
 // Save docx reviewed questions
-document.getElementById('btn-save-docx-questions').addEventListener('click', () => {
+document.getElementById('btn-save-docx-questions').addEventListener('click', async () => {
   // Sync form inputs back to currentParsedQuestions array
   for (let idx = 0; idx < currentParsedQuestions.length; idx++) {
     const qTextVal = document.getElementById(`docx-q-text-${idx}`).value.trim();
@@ -1132,13 +1158,31 @@ document.getElementById('btn-save-docx-questions').addEventListener('click', () 
     delete currentParsedQuestions[idx].needsVerification; // Clear warnings flags
   }
   
-  // Store finalized json array string
-  parsedQuestionsJson.value = JSON.stringify(currentParsedQuestions);
-  docxUploadStatus.textContent = `พร้อมบันทึก: ตรวจสอบและอนุมัติข้อสอบจำนวน ${currentParsedQuestions.length} ข้อแล้ว`;
+  if (docxTargetExamId) {
+    try {
+      const exams = await dbManager.getExams();
+      const exam = exams.find(e => e.examId === docxTargetExamId);
+      if (exam) {
+        exam.questions = currentParsedQuestions;
+        await dbManager.saveExam(exam);
+        showNotification(`บันทึกข้อสอบในวิชา ${exam.subjectCode} สำเร็จ (${currentParsedQuestions.length} ข้อ)`);
+        loadAdminExamsList();
+      } else {
+        showNotification("ไม่พบวิชานี้ในระบบเพื่อนำเข้าข้อสอบ", true);
+      }
+    } catch (err) {
+      showNotification("ไม่สามารถบันทึกข้อสอบได้: " + err.message, true);
+    }
+    docxTargetExamId = null;
+  } else {
+    // Store finalized json array string in form
+    parsedQuestionsJson.value = JSON.stringify(currentParsedQuestions);
+    docxUploadStatus.textContent = `พร้อมบันทึก: ตรวจสอบและอนุมัติข้อสอบจำนวน ${currentParsedQuestions.length} ข้อแล้ว`;
+    showNotification("ตรวจสอบและบันทึกโครงสร้างข้อสอบเรียบร้อย");
+  }
   
   // Close modal
   document.getElementById('modal-docx-preview').classList.add('hidden');
-  showNotification("ตรวจสอบและบันทึกโครงสร้างข้อสอบเรียบร้อย");
 });
 
 // Timetable schedule forms submissions
@@ -1263,7 +1307,7 @@ async function loadAdminExamsList() {
       return;
     }
     
-    const isAdmin = currentUser && currentUser.username === 'admin';
+    const isAdmin = currentUser && (currentUser.role === 'admin' || currentUser.username === 'admin');
     
     filteredExams.forEach((ex) => {
       const tr = document.createElement('tr');
@@ -1306,9 +1350,19 @@ async function loadAdminExamsList() {
         <td style="text-align: left;"><b style="color: var(--accent-color);">${ex.subjectCode}</b> ${ex.subjectName} <span style="font-size: 0.75rem; color: var(--text-muted); display: block;">ปีการศึกษา ${ex.academicYear || '2568'} (${ex.term || 'ปลายภาค'})</span></td>
         <td>${ex.room || '-'}</td>
         <td>
-          <span class="badge ${isOnline ? 'badge-link' : 'badge-paper'}" style="cursor: default; pointer-events: none;">
-            ${isOnline ? `Online (${ex.questions ? ex.questions.length : 0} ข้อ)` : 'Paper'}
-          </span>
+          <div style="display: flex; flex-direction: column; align-items: center; gap: 0.35rem;">
+            <span class="badge ${isOnline ? 'badge-link' : 'badge-paper'}" style="cursor: default; pointer-events: none; margin-bottom: 0.15rem;">
+              ${isOnline ? 'Online' : 'Paper'}
+            </span>
+            ${isOnline ? `
+              <button class="btn btn-secondary btn-action" onclick="${ex.questions && ex.questions.length > 0 ? `triggerEditQuestionsForExam('${ex.examId}')` : `triggerDocxUploadForExam('${ex.examId}')`}" 
+                      style="padding: 0.25rem 0.5rem; font-size: 0.75rem; width: auto; margin: 0 auto; display: flex; align-items: center; gap: 0.25rem; font-weight: 500;" 
+                      title="${ex.questions && ex.questions.length > 0 ? 'แก้ไขคำถามข้อสอบ' : 'อัปโหลดไฟล์ข้อสอบเวิร์ด'}">
+                <i class="fa-solid ${ex.questions && ex.questions.length > 0 ? 'fa-file-signature' : 'fa-cloud-arrow-up'}"></i>
+                ${ex.questions && ex.questions.length > 0 ? `แก้ไข (${ex.questions.length} ข้อ)` : 'อัปโหลดข้อสอบ'}
+              </button>
+            ` : ''}
+          </div>
         </td>
         <td>${linkOverrideSelect}</td>
         <td>${actionButtons}</td>
