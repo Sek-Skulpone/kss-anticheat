@@ -1203,6 +1203,11 @@ function resetExamInputForm() {
   document.getElementById('exam-room').value = '';
   document.getElementById('exam-type').value = 'online';
   
+  const examGradeSelect = document.getElementById('exam-grade');
+  if (examGradeSelect && examGradeSelect.options.length > 0) {
+    examGradeSelect.selectedIndex = 0;
+  }
+  
   const examYearSelect = document.getElementById('exam-academic-year');
   if (examYearSelect && examYearSelect.options.length > 0) {
     examYearSelect.selectedIndex = 0;
@@ -1328,6 +1333,7 @@ window.editAdminExam = async function(examId) {
     document.getElementById('exam-end-time').value = exam.endTime;
     document.getElementById('exam-duration').value = exam.duration;
     document.getElementById('exam-subject-code').value = exam.subjectCode;
+    document.getElementById('exam-grade').value = exam.grade;
     document.getElementById('exam-subject-name').value = exam.subjectName;
     document.getElementById('exam-room').value = exam.room || '';
     document.getElementById('exam-type').value = exam.examType;
