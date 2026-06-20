@@ -1508,17 +1508,38 @@ async function loadAdminTeachersList() {
     
     list.forEach((t) => {
       const tr = document.createElement('tr');
-      const isAdmin = t.username === 'admin';
+      const isMainAdmin = t.username === 'admin';
+      const role = t.role || (isMainAdmin ? 'admin' : 'teacher');
+      
+      let roleSelect = '';
+      if (isMainAdmin) {
+        roleSelect = `<span class="badge badge-paper" style="background: rgba(218, 165, 32, 0.15); color: var(--accent-color); border: 1px solid var(--accent-color);">ผู้ดูแลระบบหลัก (Admin)</span>`;
+      } else {
+        roleSelect = `
+          <select class="form-control" onchange="changeTeacherAdminRole('${t.username}', this.value)" style="width: auto; padding: 0.25rem 0.4rem; font-size: 0.85rem; background: var(--input-bg); border-color: var(--input-border); color: var(--text-primary); cursor: pointer;">
+            <option value="teacher" ${role === 'teacher' ? 'selected' : ''}>ครูคุมสอบ (Teacher)</option>
+            <option value="admin" ${role === 'admin' ? 'selected' : ''}>ผู้ดูแลระบบ (Admin)</option>
+          </select>
+        `;
+      }
+      
+      let actions = '';
+      if (isMainAdmin) {
+        actions = '-';
+      } else {
+        actions = `
+          <div class="action-buttons-cell">
+            <button class="btn btn-secondary btn-action" onclick="openAdminEditPasswordModal('${t.username}')" title="แก้ไขรหัสผ่าน" style="background: var(--accent-glow); border-color: var(--accent-color); color: var(--text-primary);"><i class="fa-solid fa-key"></i> รหัสผ่าน</button>
+            <button class="btn btn-danger btn-action" onclick="deleteAdminTeacher('${t.username}')" title="ลบครูคนนี้"><i class="fa-regular fa-trash-can"></i> ลบ</button>
+          </div>
+        `;
+      }
       
       tr.innerHTML = `
         <td><b>${t.username}</b></td>
         <td style="text-align: left;">${t.name}</td>
-        <td><span style="font-family: monospace; font-size: 0.95rem;">${t.password}</span></td>
-        <td>
-          ${isAdmin ? '<span class="badge badge-paper">ผู้ดูแลระบบหลัก</span>' : `
-            <button class="btn btn-danger btn-action" onclick="deleteAdminTeacher('${t.username}')" title="ลบครูคนนี้"><i class="fa-regular fa-trash-can"></i> ลบ</button>
-          `}
-        </td>
+        <td>${roleSelect}</td>
+        <td>${actions}</td>
       `;
       tbody.appendChild(tr);
     });
@@ -1932,7 +1953,7 @@ if (formActivePeriod) {
 }
 
 function checkTeacherPermissions() {
-  const isAdmin = currentUser && currentUser.username === 'admin';
+  const isAdmin = currentUser && (currentUser.role === 'admin' || currentUser.username === 'admin');
   
   // Tab elements
   const tabImport = document.getElementById('tab-btn-students-import');
@@ -1957,6 +1978,117 @@ function checkTeacherPermissions() {
     if (timetableGrid) timetableGrid.style.gridTemplateColumns = '1fr';
     if (btnClearDb) btnClearDb.classList.add('hidden');
   }
+}
+
+/* ==========================================================================
+   15. TEACHER ROLE & PASSWORD EDIT Event Handlers
+   ========================================================================== */
+
+window.changeTeacherAdminRole = function(username, role) {
+  dbManager.updateTeacherRole(username, role)
+    .then(() => {
+      showNotification(`อัปเดตบทบาทของคุณครู "${username}" เรียบร้อยแล้ว`);
+      
+      // If updating oneself, reload permissions
+      if (currentUser && currentUser.username === username) {
+        currentUser.role = role;
+        sessionStorage.setItem('kss_user', JSON.stringify(currentUser));
+        checkTeacherPermissions();
+      }
+      loadAdminTeachersList();
+    })
+    .catch(err => {
+      showNotification("อัปเดตบทบาทล้มเหลว: " + err.message, true);
+    });
+};
+
+// Change own password modal triggers
+const modalOwnPass = document.getElementById('modal-change-password-own');
+const formOwnPass = document.getElementById('form-change-password-own');
+
+document.getElementById('btn-teacher-change-password-own').addEventListener('click', () => {
+  if (modalOwnPass) modalOwnPass.classList.remove('hidden');
+});
+
+document.getElementById('btn-close-change-password-own').addEventListener('click', () => {
+  if (modalOwnPass) {
+    modalOwnPass.classList.add('hidden');
+    formOwnPass.reset();
+  }
+});
+
+if (formOwnPass) {
+  formOwnPass.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const oldPass = document.getElementById('change-pass-old').value;
+    const newPass = document.getElementById('change-pass-new').value;
+    const confirmPass = document.getElementById('change-pass-confirm').value;
+    
+    if (newPass !== confirmPass) {
+      showNotification("รหัสผ่านใหม่ไม่ตรงกับการยืนยัน", true);
+      return;
+    }
+    
+    if (newPass.length < 6) {
+      showNotification("รหัสผ่านใหม่ต้องมีความยาวอย่างน้อย 6 ตัวอักษร", true);
+      return;
+    }
+    
+    try {
+      await dbManager.changeOwnPassword(currentUser.username, oldPass, newPass);
+      showNotification("เปลี่ยนรหัสผ่านส่วนตัวสำเร็จเรียบร้อยแล้ว");
+      
+      // Update session values
+      currentUser.password = newPass;
+      sessionStorage.setItem('kss_user', JSON.stringify(currentUser));
+      
+      // Hide modal and reset form
+      modalOwnPass.classList.add('hidden');
+      formOwnPass.reset();
+    } catch (err) {
+      showNotification(err.message, true);
+    }
+  });
+}
+
+// Admin change other teacher password modal triggers
+const modalAdminEditPass = document.getElementById('modal-admin-edit-password');
+const formAdminEditPass = document.getElementById('form-admin-edit-password');
+
+window.openAdminEditPasswordModal = function(username) {
+  document.getElementById('admin-edit-pass-username').textContent = username;
+  document.getElementById('admin-edit-pass-target-user').value = username;
+  if (modalAdminEditPass) modalAdminEditPass.classList.remove('hidden');
+};
+
+document.getElementById('btn-close-admin-edit-password').addEventListener('click', () => {
+  if (modalAdminEditPass) {
+    modalAdminEditPass.classList.add('hidden');
+    formAdminEditPass.reset();
+  }
+});
+
+if (formAdminEditPass) {
+  formAdminEditPass.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const targetUser = document.getElementById('admin-edit-pass-target-user').value;
+    const newPass = document.getElementById('admin-edit-pass-new').value;
+    
+    if (newPass.length < 6) {
+      showNotification("รหัสผ่านต้องมีความยาวอย่างน้อย 6 ตัวอักษร", true);
+      return;
+    }
+    
+    try {
+      await dbManager.updateTeacherPassword(targetUser, newPass);
+      showNotification(`แก้ไขรหัสผ่านของคุณครู "${targetUser}" สำเร็จแล้ว`);
+      if (modalAdminEditPass) modalAdminEditPass.classList.add('hidden');
+      formAdminEditPass.reset();
+      loadAdminTeachersList();
+    } catch (err) {
+      showNotification("การแก้ไขล้มเหลว: " + err.message, true);
+    }
+  });
 }
 
 // Init bootstrap app load

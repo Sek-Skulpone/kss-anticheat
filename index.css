@@ -2,42 +2,42 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Sarabun:wght@300;400;500;600;700&display=swap');
 
 :root {
-  --primary-color: #1b3a30;     /* Deep forest green from Image 3 */
-  --primary-glow: rgba(27, 58, 48, 0.12);
-  --accent-color: #d4af37;      /* Gold */
-  --accent-glow: rgba(212, 175, 55, 0.25);
+  --primary-color: #2F4F4F;     /* Tidewater Green */
+  --primary-glow: rgba(47, 79, 79, 0.12);
+  --accent-color: #DAA520;      /* Fortuna Gold */
+  --accent-glow: rgba(218, 165, 32, 0.25);
   --danger-color: #e63946;      /* Vibrant red */
-  --success-color: #2e705c;     /* Emerald teal */
+  --success-color: #2a7a62;     /* Emerald teal */
   --warning-color: #f4a261;     /* Orange */
   
   /* School Premium Light Theme variables */
-  --bg-color: #f4f7f5;          /* Off-white background */
+  --bg-color: #FAEBD7;          /* Set Sail Champagne background */
   --card-bg: #ffffff;           /* Clean white cards */
-  --card-border: rgba(27, 58, 48, 0.1);
-  --text-primary: #11221b;      /* Dark green-charcoal */
-  --text-secondary: #4a6357;    /* Charcoal secondary */
-  --text-muted: #7c9488;
+  --card-border: rgba(47, 79, 79, 0.15);
+  --text-primary: #1c2b2b;      /* Dark slate text */
+  --text-secondary: #425c5c;    /* Medium slate secondary */
+  --text-muted: #759292;
   --input-bg: #ffffff;
-  --input-border: rgba(27, 58, 48, 0.18);
+  --input-border: rgba(47, 79, 79, 0.22);
   
-  --shadow-sm: 0 2px 4px rgba(27, 58, 48, 0.04);
-  --shadow-md: 0 4px 12px rgba(27, 58, 48, 0.06), 0 2px 4px rgba(27, 58, 48, 0.04);
-  --shadow-lg: 0 10px 25px rgba(27, 58, 48, 0.08), 0 3px 6px rgba(27, 58, 48, 0.04);
+  --shadow-sm: 0 2px 4px rgba(47, 79, 79, 0.04);
+  --shadow-md: 0 4px 12px rgba(47, 79, 79, 0.06), 0 2px 4px rgba(47, 79, 79, 0.04);
+  --shadow-lg: 0 10px 25px rgba(47, 79, 79, 0.08), 0 3px 6px rgba(47, 79, 79, 0.04);
   --font-main: 'Sarabun', 'Inter', sans-serif;
   --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   --transition-fast: all 0.15s ease;
 }
 
-/* Light Theme overrides (No-op since it is default, kept for compatibility) */
+/* Light Theme overrides */
 .light-theme {
-  --bg-color: #f4f7f5;
+  --bg-color: #FAEBD7;
   --card-bg: #ffffff;
-  --card-border: rgba(27, 58, 48, 0.1);
-  --text-primary: #11221b;
-  --text-secondary: #4a6357;
-  --text-muted: #7c9488;
+  --card-border: rgba(47, 79, 79, 0.15);
+  --text-primary: #1c2b2b;
+  --text-secondary: #425c5c;
+  --text-muted: #759292;
   --input-bg: #ffffff;
-  --input-border: rgba(27, 58, 48, 0.2);
+  --input-border: rgba(47, 79, 79, 0.25);
   --input-border-focus: var(--primary-color);
 }
 

@@ -216,15 +216,18 @@
     <div class="app-topbar w-full" style="border-radius: 12px; margin-bottom: 1.5rem;">
       <div style="display: flex; align-items: center; gap: 1rem;">
         <svg style="width: 40px; height: 40px;" viewBox="0 0 100 100">
-          <circle cx="50" cy="50" r="45" fill="#1b4d3e" stroke="#d4af37" stroke-width="3"/>
-          <path d="M50,15 C55,30 65,35 65,50 C65,65 50,75 50,85" stroke="#d4af37" stroke-width="2"/>
+          <circle cx="50" cy="50" r="45" fill="#2F4F4F" stroke="#DAA520" stroke-width="3"/>
+          <path d="M50,15 C55,30 65,35 65,50 C65,65 50,75 50,85" stroke="#DAA520" stroke-width="2"/>
         </svg>
         <div>
           <h3 style="font-size: 1.1rem;" id="teacher-display-name">คุณครูสมศรี มั่งมี</h3>
           <span style="font-size: 0.8rem; color: var(--accent-color);">แผงควบคุมระบบคุมสอบโรงเรียนโคกสีวิทยาสรรค์</span>
         </div>
       </div>
-      <button class="btn btn-danger btn-action" id="btn-teacher-logout" style="width: auto;"><i class="fa-solid fa-right-from-bracket"></i> ออกจากระบบ</button>
+      <div style="display: flex; gap: 0.5rem; align-items: center;">
+        <button class="btn btn-secondary btn-action" id="btn-teacher-change-password-own" style="width: auto; background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.15);"><i class="fa-solid fa-key"></i> เปลี่ยนรหัสผ่าน</button>
+        <button class="btn btn-danger btn-action" id="btn-teacher-logout" style="width: auto;"><i class="fa-solid fa-right-from-bracket"></i> ออกจากระบบ</button>
+      </div>
     </div>
     
     <!-- Tab Controls -->
@@ -639,8 +642,8 @@
                 <tr>
                   <th>ชื่อผู้ใช้ (Username)</th>
                   <th>ชื่อ-นามสกุล (Name)</th>
-                  <th>รหัสผ่าน (Password)</th>
-                  <th>จัดการ</th>
+                  <th>สิทธิ์การใช้งาน (Role)</th>
+                  <th>จัดการครู</th>
                 </tr>
               </thead>
               <tbody id="teachers-table-body">
@@ -702,6 +705,52 @@
         <button class="btn btn-primary" id="btn-confirm-submit-ok">ยืนยันส่งข้อสอบ</button>
         <button class="btn btn-secondary" id="btn-confirm-submit-cancel">ยกเลิก</button>
       </div>
+    </div>
+  </div>
+
+  <!-- Teacher Change Own Password Modal -->
+  <div id="modal-change-password-own" class="warning-modal-backdrop hidden" style="backdrop-filter: blur(8px);">
+    <div class="warning-modal-content" style="max-width: 450px; text-align: left; background: #2F4F4F; border-color: var(--accent-color);">
+      <h3 class="warning-modal-title" style="color: var(--accent-color); margin-bottom: 1.5rem;"><i class="fa-solid fa-key"></i> เปลี่ยนรหัสผ่านส่วนตัว</h3>
+      <form id="form-change-password-own">
+        <div class="form-group">
+          <label class="form-label" style="color: #fff;">รหัสผ่านเดิม</label>
+          <input type="password" id="change-pass-old" class="form-control" placeholder="กรอกรหัสผ่านปัจจุบัน" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label" style="color: #fff;">รหัสผ่านใหม่</label>
+          <input type="password" id="change-pass-new" class="form-control" placeholder="รหัสผ่านใหม่ (อย่างน้อย 6 ตัวอักษร)" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label" style="color: #fff;">ยืนยันรหัสผ่านใหม่</label>
+          <input type="password" id="change-pass-confirm" class="form-control" placeholder="ยืนยันรหัสผ่านใหม่" required>
+        </div>
+        <div style="display: flex; gap: 0.5rem; margin-top: 1.5rem;">
+          <button type="submit" class="btn btn-primary" style="background: var(--accent-color); color: #11221b;"><i class="fa-solid fa-floppy-disk"></i> บันทึกรหัสผ่านใหม่</button>
+          <button type="button" id="btn-close-change-password-own" class="btn btn-secondary">ยกเลิก</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Admin Edit Teacher Password Modal -->
+  <div id="modal-admin-edit-password" class="warning-modal-backdrop hidden" style="backdrop-filter: blur(8px);">
+    <div class="warning-modal-content" style="max-width: 450px; text-align: left; background: #2F4F4F; border-color: var(--accent-color);">
+      <h3 class="warning-modal-title" style="color: var(--accent-color); margin-bottom: 1.5rem;"><i class="fa-solid fa-user-shield"></i> แก้ไขรหัสผ่านคุณครู</h3>
+      <p style="color: rgba(255,255,255,0.75); font-size: 0.85rem; margin-bottom: 1.25rem;">
+        คุณกำลังดำเนินการเปลี่ยนรหัสผ่านให้กับคุณครู: <b id="admin-edit-pass-username" style="color: var(--accent-color); font-size: 1rem;">-</b>
+      </p>
+      <form id="form-admin-edit-password">
+        <input type="hidden" id="admin-edit-pass-target-user">
+        <div class="form-group">
+          <label class="form-label" style="color: #fff;">รหัสผ่านใหม่</label>
+          <input type="password" id="admin-edit-pass-new" class="form-control" placeholder="กรอกรหัสผ่านใหม่" required>
+        </div>
+        <div style="display: flex; gap: 0.5rem; margin-top: 1.5rem;">
+          <button type="submit" class="btn btn-primary" style="background: var(--accent-color); color: #11221b;"><i class="fa-solid fa-floppy-disk"></i> ยืนยันบันทึก</button>
+          <button type="button" id="btn-close-admin-edit-password" class="btn btn-secondary">ยกเลิก</button>
+        </div>
+      </form>
     </div>
   </div>
 

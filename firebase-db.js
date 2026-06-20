@@ -72,7 +72,8 @@ export async function loginTeacher(username, password) {
       const defaultTeacher = {
         username: 'admin',
         password: 'kss12345',
-        name: 'ผู้ดูแลระบบเริ่มต้น (Default Admin)'
+        name: 'ผู้ดูแลระบบเริ่มต้น (Default Admin)',
+        role: 'admin'
       };
       await store.collection('teachers').doc('admin').set(defaultTeacher);
       return defaultTeacher;
@@ -84,6 +85,12 @@ export async function loginTeacher(username, password) {
   if (teacher.password !== password) {
     throw new Error("รหัสผ่านไม่ถูกต้อง");
   }
+  
+  // Backwards compatibility for roles
+  if (!teacher.role) {
+    teacher.role = (username.trim() === 'admin') ? 'admin' : 'teacher';
+  }
+  
   return teacher;
 }
 
@@ -99,6 +106,9 @@ export async function getTeachers() {
 
 export async function saveTeacher(teacher) {
   const store = checkDB();
+  if (!teacher.role) {
+    teacher.role = 'teacher';
+  }
   await store.collection('teachers').doc(teacher.username.trim()).set(teacher);
 }
 
@@ -108,6 +118,42 @@ export async function deleteTeacher(username) {
     throw new Error("ไม่สามารถลบบัญชีผู้ดูแลระบบหลัก (admin) ได้");
   }
   await store.collection('teachers').doc(username).delete();
+}
+
+export async function updateTeacherRole(username, role) {
+  const store = checkDB();
+  if (username === 'admin') {
+    throw new Error("ไม่สามารถเปลี่ยนสิทธิ์ของบัญชีผู้ดูแลระบบหลัก (admin) ได้");
+  }
+  await store.collection('teachers').doc(username).update({
+    role: role
+  });
+}
+
+export async function updateTeacherPassword(username, newPassword) {
+  const store = checkDB();
+  await store.collection('teachers').doc(username).update({
+    password: newPassword
+  });
+}
+
+export async function changeOwnPassword(username, oldPassword, newPassword) {
+  const store = checkDB();
+  const docRef = store.collection('teachers').doc(username.trim());
+  const doc = await docRef.get();
+  
+  if (!doc.exists) {
+    throw new Error("ไม่พบข้อมูลผู้ใช้ในระบบ");
+  }
+  
+  const teacher = doc.data();
+  if (teacher.password !== oldPassword) {
+    throw new Error("รหัสผ่านเดิมไม่ถูกต้อง");
+  }
+  
+  await docRef.update({
+    password: newPassword
+  });
 }
 
 /* ==========================================================================
