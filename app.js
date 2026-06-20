@@ -48,76 +48,9 @@ function showNotification(message, isError = false) {
    1. FIREBASE SETUP & INITIALIZATION
    ========================================================================== */
 
-const screenConfig = document.getElementById('screen-config');
-const configForm = document.getElementById('config-form');
-
 function checkFirebaseConnection() {
-  if (dbManager.isFirebaseInitialized()) {
-    showScreen('screen-login');
-  } else {
-    showScreen('screen-config');
-  }
+  showScreen('screen-login');
 }
-
-// Config form submit
-configForm.addEventListener('submit', (e) => {
-  e.preventDefault();
-  const config = {
-    apiKey: document.getElementById('config-apiKey').value.trim(),
-    authDomain: document.getElementById('config-authDomain').value.trim(),
-    projectId: document.getElementById('config-projectId').value.trim(),
-    storageBucket: document.getElementById('config-storageBucket').value.trim(),
-    messagingSenderId: document.getElementById('config-messagingSenderId').value.trim(),
-    appId: document.getElementById('config-appId').value.trim()
-  };
-  
-  const success = dbManager.initFirebase(config);
-  if (success) {
-    localStorage.setItem('kss_firebase_config', JSON.stringify(config));
-    showNotification("เชื่อมต่อฐานข้อมูล Firebase สำเร็จ");
-    showScreen('screen-login');
-  } else {
-    showNotification("การเชื่อมต่อล้มเหลว กรุณาตรวจสอบข้อมูลการตั้งค่า", true);
-  }
-});
-
-// Setup tab config form
-const tabConfigForm = document.getElementById('tab-config-form');
-tabConfigForm.addEventListener('submit', (e) => {
-  e.preventDefault();
-  const config = {
-    apiKey: document.getElementById('tab-config-apiKey').value.trim(),
-    authDomain: document.getElementById('tab-config-authDomain').value.trim(),
-    projectId: document.getElementById('tab-config-projectId').value.trim(),
-    storageBucket: document.getElementById('tab-config-storageBucket').value.trim(),
-    messagingSenderId: document.getElementById('tab-config-messagingSenderId').value.trim(),
-    appId: document.getElementById('tab-config-appId').value.trim()
-  };
-  
-  const success = dbManager.initFirebase(config);
-  if (success) {
-    localStorage.setItem('kss_firebase_config', JSON.stringify(config));
-    showNotification("อัปเดตการเชื่อมต่อสำเร็จ");
-  } else {
-    showNotification("ไม่สามารถเชื่อมต่อได้ กรุณาลองใหม่อีกครั้ง", true);
-  }
-});
-
-// Reset database connections
-document.getElementById('btn-reset-db-entirely').addEventListener('click', () => {
-  if (confirm("คุณต้องการล้างประวัติการเชื่อมต่อฐานข้อมูลทั้งหมดใช่หรือไม่? (คุณจะต้องตั้งค่าข้อมูลเชื่อมต่อใหม่)")) {
-    localStorage.removeItem('kss_firebase_config');
-    window.location.reload();
-  }
-});
-
-document.getElementById('link-reset-firebase').addEventListener('click', (e) => {
-  e.preventDefault();
-  if (confirm("ตั้งค่าฐานข้อมูล Firebase ใหม่หรือไม่?")) {
-    localStorage.removeItem('kss_firebase_config');
-    window.location.reload();
-  }
-});
 
 /* ==========================================================================
    2. AUTHENTICATION (LOGIN / LOGOUT)
@@ -322,55 +255,60 @@ function renderTimetableForDate(dateStr, exams) {
     // 1. Day Column (Span all exams or just render)
     const formattedDay = formatThaiDay(dateStr);
     
-    // 2. Exam Time Range
-    const timeRange = `${exam.startTime} น. - ${exam.endTime} น.`;
+    // 2. Exam Time Range (24h format)
+    const timeRange = `${exam.startTime.replace(':', '.')} น. - ${exam.endTime.replace(':', '.')} น.`;
     
-    // 3. Action badge based on type: paper or online link
+    // 3. Action badge based on type: paper or online link (handles teacher overrides)
     let actionBadge = '';
     const uniqueRowId = `exam-action-${exam.examId}`;
     
     if (exam.examType === 'paper') {
       actionBadge = `<span class="badge badge-paper">Paper</span>`;
     } else {
-      // It is online. We need to check if exam is in the future, active, or in the past.
-      actionBadge = `<span class="badge badge-countdown" id="${uniqueRowId}">กำลังตรวจสอบ...</span>`;
-      
-      // Start real-time countdown tracker for this online row
-      const startDateTime = getExamTime(exam.date, exam.startTime);
-      const endDateTime = getExamTime(exam.date, exam.endTime);
-      
-      const updateRowStatus = () => {
-        const now = new Date();
-        const element = document.getElementById(uniqueRowId);
-        if (!element) return;
+      if (exam.linkStatus === 'released') {
+        actionBadge = `<span class="badge badge-link" onclick="enterExamRoomById('${exam.examId}')"><i class="fa-solid fa-play"></i> เข้าสู่ห้องสอบ</span>`;
+      } else if (exam.linkStatus === 'hidden') {
+        actionBadge = `<span class="badge badge-ended">ปิดรับการเข้าสอบ</span>`;
+      } else {
+        // Default: Auto (Scheduled countdown)
+        actionBadge = `<span class="badge badge-countdown" id="${uniqueRowId}">กำลังตรวจสอบ...</span>`;
         
-        if (now < startDateTime) {
-          // Future exam - show countdown
-          const diffMs = startDateTime - now;
-          const diffSec = Math.floor(diffMs / 1000);
-          const hrs = String(Math.floor(diffSec / 3600)).padStart(2, '0');
-          const mins = String(Math.floor((diffSec % 3600) / 60)).padStart(2, '0');
-          const secs = String(diffSec % 60).padStart(2, '0');
+        const startDateTime = getExamTime(exam.date, exam.startTime);
+        const endDateTime = getExamTime(exam.date, exam.endTime);
+        
+        const updateRowStatus = () => {
+          const now = new Date();
+          const element = document.getElementById(uniqueRowId);
+          if (!element) return;
           
-          element.className = 'badge badge-countdown';
-          element.innerHTML = `<i class="fa-regular fa-clock"></i> รอสอบ: ${hrs}:${mins}:${secs}`;
-          element.onclick = null;
-        } else if (now >= startDateTime && now <= endDateTime) {
-          // Active exam - show link
-          element.className = 'badge badge-link';
-          element.innerHTML = `<i class="fa-solid fa-play"></i> เข้าสู่ห้องสอบ`;
-          element.style.cursor = 'pointer';
-          element.onclick = () => enterExamRoom(exam);
-        } else {
-          // Passed exam
-          element.className = 'badge badge-ended';
-          element.innerHTML = `สิ้นสุดการสอบ`;
-          element.onclick = null;
-        }
-      };
-      
-      updateRowStatus();
-      studentTimerIntervals[exam.examId] = setInterval(updateRowStatus, 1000);
+          if (now < startDateTime) {
+            // Future exam - show countdown
+            const diffMs = startDateTime - now;
+            const diffSec = Math.floor(diffMs / 1000);
+            const hrs = String(Math.floor(diffSec / 3600)).padStart(2, '0');
+            const mins = String(Math.floor((diffSec % 3600) / 60)).padStart(2, '0');
+            const secs = String(diffSec % 60).padStart(2, '0');
+            
+            element.className = 'badge badge-countdown';
+            element.innerHTML = `<i class="fa-regular fa-clock"></i> รอสอบ: ${hrs}:${mins}:${secs}`;
+            element.onclick = null;
+          } else if (now >= startDateTime && now <= endDateTime) {
+            // Active exam - show link
+            element.className = 'badge badge-link';
+            element.innerHTML = `<i class="fa-solid fa-play"></i> เข้าสู่ห้องสอบ`;
+            element.style.cursor = 'pointer';
+            element.onclick = () => enterExamRoom(exam);
+          } else {
+            // Passed exam
+            element.className = 'badge badge-ended';
+            element.innerHTML = `สิ้นสุดการสอบ`;
+            element.onclick = null;
+          }
+        };
+        
+        updateRowStatus();
+        studentTimerIntervals[exam.examId] = setInterval(updateRowStatus, 1000);
+      }
     }
     
     row.innerHTML = `
@@ -880,15 +818,6 @@ function setupTeacherDashboard() {
   document.getElementById('teacher-display-name').textContent = `คุณครู ${currentUser.name}`;
   showScreen('screen-teacher-dashboard');
   
-  // Set default tab config fields
-  const config = JSON.parse(localStorage.getItem('kss_firebase_config') || '{}');
-  document.getElementById('tab-config-apiKey').value = config.apiKey || '';
-  document.getElementById('tab-config-authDomain').value = config.authDomain || '';
-  document.getElementById('tab-config-projectId').value = config.projectId || '';
-  document.getElementById('tab-config-storageBucket').value = config.storageBucket || '';
-  document.getElementById('tab-config-messagingSenderId').value = config.messagingSenderId || '';
-  document.getElementById('tab-config-appId').value = config.appId || '';
-  
   // Initialize dynamic tab routing
   initializeTeacherTabRouter();
   
@@ -896,6 +825,8 @@ function setupTeacherDashboard() {
   startLiveMonitor();
   
   // Load initial data
+  loadGradesData();
+  loadAdminStudentsList();
   loadAdminExamsList();
   loadAdminTeachersList();
   updateDBTotalStudentsStats();
@@ -1292,18 +1223,32 @@ async function loadAdminExamsList() {
       const formattedDate = formatThaiDateShort(ex.date);
       const isOnline = ex.examType === 'online';
       
+      const formattedStartTime = ex.startTime.replace(':', '.');
+      const formattedEndTime = ex.endTime.replace(':', '.');
+      
+      let linkOverrideSelect = '-';
+      if (isOnline) {
+        linkOverrideSelect = `
+          <select class="form-control" onchange="changeAdminExamLinkStatus('${ex.examId}', this.value)" style="width: auto; padding: 0.25rem 0.4rem; font-size: 0.85rem; margin: 0 auto; background: var(--input-bg); border-color: var(--input-border); color: var(--text-primary);">
+            <option value="auto" ${ex.linkStatus === 'auto' || !ex.linkStatus ? 'selected' : ''}>Auto (ตามเวลา)</option>
+            <option value="released" ${ex.linkStatus === 'released' ? 'selected' : ''}>ปล่อยลิงก์ทันที</option>
+            <option value="hidden" ${ex.linkStatus === 'hidden' ? 'selected' : ''}>ซ่อนลิงก์ข้อสอบ</option>
+          </select>
+        `;
+      }
+      
       tr.innerHTML = `
         <td><b>${ex.grade}</b></td>
         <td>${formattedDate}</td>
-        <td>${ex.startTime} - ${ex.endTime}</td>
-        <td><b style="color: var(--accent-color);">${ex.subjectCode}</b></td>
-        <td style="text-align: left;">${ex.subjectName}</td>
+        <td>${formattedStartTime} น. - ${formattedEndTime} น.</td>
+        <td style="text-align: left;"><b style="color: var(--accent-color);">${ex.subjectCode}</b> ${ex.subjectName}</td>
         <td>${ex.room || '-'}</td>
         <td>
           <span class="badge ${isOnline ? 'badge-link' : 'badge-paper'}" style="cursor: default; pointer-events: none;">
             ${isOnline ? `Online (${ex.questions ? ex.questions.length : 0} ข้อ)` : 'Paper'}
           </span>
         </td>
+        <td>${linkOverrideSelect}</td>
         <td>
           <div class="action-buttons-cell">
             <button class="btn btn-secondary btn-action" onclick="editAdminExam('${ex.examId}')" title="แก้ไขวิชานี้"><i class="fa-regular fa-edit"></i></button>
@@ -1574,21 +1519,226 @@ function formatThaiDay(dateStr) {
   return `${shortPrefix}\n${date.getDate()} มี.ค. ${date.getFullYear() + 543}`;
 }
 
+// Global Exam Room trigger by ID (bypassing schedule details)
+window.enterExamRoomById = async function(examId) {
+  try {
+    const exams = await dbManager.getExams();
+    const exam = exams.find(e => e.examId === examId);
+    if (exam) {
+      enterExamRoom(exam);
+    }
+  } catch (e) {
+    showNotification("ดึงข้อมูลข้อสอบล้มเหลว", true);
+  }
+};
+
+// Global Link Status Change override hook
+window.changeAdminExamLinkStatus = function(examId, status) {
+  dbManager.updateExamLinkStatus(examId, status)
+    .then(() => {
+      showNotification("อัปเดตสถานะการปล่อยข้อสอบเรียบร้อย");
+      loadAdminExamsList();
+    })
+    .catch(err => {
+      showNotification("การอัปเดตล้มเหลว: " + err.message, true);
+    });
+};
+
+/* ==========================================================================
+   11. DYNAMIC GRADES INTERFACES
+   ========================================================================== */
+
+let currentGradesList = [];
+
+async function loadGradesData() {
+  try {
+    const grades = await dbManager.getGrades();
+    currentGradesList = grades;
+    renderAdminGradesList(grades);
+    populateGradeDropdowns(grades);
+  } catch (err) {
+    console.error("Failed to load grades:", err);
+  }
+}
+
+function renderAdminGradesList(grades) {
+  const tbody = document.getElementById('db-grades-table-body');
+  tbody.innerHTML = '';
+  
+  grades.forEach((g) => {
+    const tr = document.createElement('tr');
+    const formattedDate = g.createdAt ? formatThaiDateShort(g.createdAt) : '-';
+    tr.innerHTML = `
+      <td><b>${g.name}</b></td>
+      <td>${formattedDate}</td>
+      <td>
+        <button class="btn btn-danger btn-action" onclick="deleteAdminGrade('${g.name}')" title="ลบระดับชั้นนี้"><i class="fa-regular fa-trash-can"></i> ลบ</button>
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+window.deleteAdminGrade = function(gradeName) {
+  if (confirm(`คุณแน่ใจว่าต้องการลบระดับชั้น "${gradeName}" หรือไม่? ข้อมูลระดับชั้นนี้จะหายไปจากตัวเลือกทั้งหมด`)) {
+    dbManager.deleteGrade(gradeName)
+      .then(() => {
+        showNotification("ลบระดับชั้นสำเร็จ");
+        loadGradesData();
+      })
+      .catch(err => {
+        showNotification("ลบล้มเหลว: " + err.message, true);
+      });
+  }
+};
+
+document.getElementById('form-manage-grade').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const nameInput = document.getElementById('new-grade-name');
+  const name = nameInput.value.trim();
+  if (!name) return;
+  
+  try {
+    await dbManager.addGrade(name);
+    showNotification(`เพิ่มระดับชั้น ${name} สำเร็จ`);
+    nameInput.value = '';
+    await loadGradesData();
+  } catch (err) {
+    showNotification(err.message, true);
+  }
+});
+
+function populateGradeDropdowns(grades) {
+  const examGradeSelect = document.getElementById('exam-grade');
+  examGradeSelect.innerHTML = '';
+  
+  const filterExamGradeSelect = document.getElementById('filter-exam-grade');
+  const prevFilterVal = filterExamGradeSelect.value || 'all';
+  filterExamGradeSelect.innerHTML = '<option value="all">ทุกระดับชั้น</option>';
+  
+  const filterStudentGradeSelect = document.getElementById('filter-student-grade');
+  const prevFilterStudentVal = filterStudentGradeSelect.value || 'all';
+  filterStudentGradeSelect.innerHTML = '<option value="all">ทุกระดับชั้น</option>';
+  
+  grades.forEach((g) => {
+    const opt1 = document.createElement('option');
+    opt1.value = g.name;
+    opt1.textContent = g.name;
+    examGradeSelect.appendChild(opt1);
+    
+    const opt2 = document.createElement('option');
+    opt2.value = g.name;
+    opt2.textContent = g.name;
+    filterExamGradeSelect.appendChild(opt2);
+    
+    const opt3 = document.createElement('option');
+    opt3.value = g.name;
+    opt3.textContent = g.name;
+    filterStudentGradeSelect.appendChild(opt3);
+  });
+  
+  filterExamGradeSelect.value = prevFilterVal;
+  filterStudentGradeSelect.value = prevFilterStudentVal;
+}
+
+/* ==========================================================================
+   12. STUDENT DATABASE VIEWER & LIST BROWSING
+   ========================================================================== */
+
+let currentStudentsList = [];
+
+async function loadAdminStudentsList() {
+  try {
+    const list = await dbManager.getAllStudents();
+    currentStudentsList = list;
+    renderFilteredStudents();
+  } catch (err) {
+    console.error("Failed to load students:", err);
+  }
+}
+
+function renderFilteredStudents() {
+  const searchQuery = document.getElementById('search-student-query').value.toLowerCase().trim();
+  const filterGrade = document.getElementById('filter-student-grade').value;
+  const filterRoom = document.getElementById('filter-student-room').value.trim();
+  
+  let filtered = currentStudentsList;
+  
+  if (searchQuery) {
+    filtered = filtered.filter(s => 
+      s.studentId.includes(searchQuery) || 
+      s.name.toLowerCase().includes(searchQuery)
+    );
+  }
+  
+  if (filterGrade !== 'all') {
+    filtered = filtered.filter(s => s.grade === filterGrade);
+  }
+  
+  if (filterRoom) {
+    filtered = filtered.filter(s => s.room === filterRoom);
+  }
+  
+  filtered.sort((a, b) => {
+    if (a.grade !== b.grade) return a.grade.localeCompare(b.grade);
+    if (a.room !== b.room) return a.room.localeCompare(b.room);
+    return a.no - b.no;
+  });
+  
+  const tbody = document.getElementById('db-students-table-body');
+  tbody.innerHTML = '';
+  
+  if (filtered.length === 0) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="6" style="padding: 2rem; color: var(--text-muted); text-align: center;">ไม่พบข้อมูลนักเรียนที่ค้นหา</td>
+      </tr>
+    `;
+    return;
+  }
+  
+  filtered.forEach((s) => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${s.no}</td>
+      <td style="font-family: monospace; font-weight: 700; color: var(--accent-color);">${s.studentId}</td>
+      <td style="text-align: left;">${s.name}</td>
+      <td>${s.grade}/${s.room}</td>
+      <td style="font-family: monospace; font-size: 0.9rem; color: var(--text-muted);">${s.password}</td>
+      <td>
+        <button class="btn btn-danger btn-action" onclick="deleteAdminStudent('${s.studentId}')" title="ลบรายชื่อนี้"><i class="fa-regular fa-trash-can"></i> ลบ</button>
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+window.deleteAdminStudent = function(studentId) {
+  if (confirm(`คุณแน่ใจว่าต้องการลบนักเรียนรหัส "${studentId}" ออกจากฐานข้อมูลหรือไม่?`)) {
+    dbManager.deleteStudent(studentId)
+      .then(() => {
+        showNotification("ลบรายชื่อนักเรียนสำเร็จ");
+        updateDBTotalStudentsStats();
+        loadAdminStudentsList();
+      })
+      .catch(err => {
+        showNotification("ลบล้มเหลว: " + err.message, true);
+      });
+  }
+};
+
+document.getElementById('search-student-query').addEventListener('input', renderFilteredStudents);
+document.getElementById('filter-student-grade').addEventListener('change', renderFilteredStudents);
+document.getElementById('filter-student-room').addEventListener('input', renderFilteredStudents);
+
 // Init bootstrap app load
 window.addEventListener('DOMContentLoaded', () => {
-  // Check session storage first (Auto log-in after reload if they are already logged in)
   const savedUser = sessionStorage.getItem('kss_user');
   const savedRole = sessionStorage.getItem('kss_role');
   
   if (savedUser && savedRole) {
     currentUser = JSON.parse(savedUser);
     currentRole = savedRole;
-    
-    // Check database configured
-    if (!dbManager.isFirebaseInitialized()) {
-      showScreen('screen-config');
-      return;
-    }
     
     if (savedRole === 'student') {
       setupStudentDashboard();

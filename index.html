@@ -21,45 +21,6 @@
     <span id="toast-message">บันทึกข้อมูลสำเร็จ</span>
   </div>
 
-  <!-- 1. Firebase Config Setup Screen -->
-  <div id="screen-config" class="screen hidden">
-    <div class="glass-card" style="max-width: 500px; width: 100%;">
-      <h2 class="app-title"><i class="fa-solid fa-database" style="color: var(--accent-color);"></i> เชื่อมต่อ Firebase</h2>
-      <p class="app-subtitle">กรอกข้อมูลการตั้งค่าสำหรับจัดเก็บฐานข้อมูลระบบสอบ</p>
-      
-      <div class="config-info">
-        <i class="fa-solid fa-circle-info"></i> คัดลอกโค้ดคอนฟิกจาก Firebase Console (Firestore Database) ข้อมูลจะบันทึกปลอดภัยในบราวเซอร์นี้โดยไม่รั่วไหลไปภายนอก
-      </div>
-      
-      <form id="config-form">
-        <div class="form-group">
-          <label class="form-label">API Key</label>
-          <input type="text" id="config-apiKey" class="form-control" placeholder="AIzaSy..." required>
-        </div>
-        <div class="form-group">
-          <label class="form-label">Auth Domain</label>
-          <input type="text" id="config-authDomain" class="form-control" placeholder="project-id.firebaseapp.com" required>
-        </div>
-        <div class="form-group">
-          <label class="form-label">Project ID</label>
-          <input type="text" id="config-projectId" class="form-control" placeholder="project-id" required>
-        </div>
-        <div class="form-group">
-          <label class="form-label">Storage Bucket</label>
-          <input type="text" id="config-storageBucket" class="form-control" placeholder="project-id.appspot.com" required>
-        </div>
-        <div class="form-group">
-          <label class="form-label">Messaging Sender ID</label>
-          <input type="text" id="config-messagingSenderId" class="form-control" placeholder="1234567890" required>
-        </div>
-        <div class="form-group">
-          <label class="form-label">App ID</label>
-          <input type="text" id="config-appId" class="form-control" placeholder="1:1234:web:abcd" required>
-        </div>
-        <button type="submit" class="btn btn-accent"><i class="fa-solid fa-plug"></i> บันทึกและเชื่อมต่อ</button>
-      </form>
-    </div>
-  </div>
 
   <!-- 2. Login Screen (Students & Teachers) -->
   <div id="screen-login" class="screen hidden">
@@ -111,7 +72,7 @@
       </form>
       
       <div style="text-align: center; margin-top: 1.5rem; font-size: 0.8rem; color: var(--text-muted);">
-        สพม. สกลนคร | <a href="#" id="link-reset-firebase" style="color: var(--accent-color); text-decoration: none;">ตั้งค่าฐานข้อมูลใหม่</a>
+        สพม. สกลนคร
       </div>
     </div>
   </div>
@@ -270,9 +231,10 @@
     <div class="tabs-nav w-full">
       <button class="tab-link active" data-target="tab-live-monitor"><i class="fa-solid fa-tv"></i> คุมสอบเรียลไทม์ & ปลดล็อก</button>
       <button class="tab-link" data-target="tab-timetable"><i class="fa-solid fa-calendar-days"></i> จัดการตารางสอบ & ข้อสอบ</button>
-      <button class="tab-link" data-target="tab-students"><i class="fa-solid fa-users"></i> นำเข้าข้อมูลนักเรียน (Excel)</button>
+      <button class="tab-link" data-target="tab-students-view"><i class="fa-solid fa-address-book"></i> ฐานข้อมูลนักเรียน</button>
+      <button class="tab-link" data-target="tab-students-import"><i class="fa-solid fa-file-excel"></i> นำเข้าข้อมูลนักเรียน (Excel)</button>
+      <button class="tab-link" data-target="tab-grades"><i class="fa-solid fa-layer-group"></i> จัดการระดับชั้น</button>
       <button class="tab-link" data-target="tab-teachers"><i class="fa-solid fa-user-gear"></i> บัญชีครู</button>
-      <button class="tab-link" data-target="tab-db-settings"><i class="fa-solid fa-sliders"></i> ตั้งค่าฐานข้อมูล</button>
     </div>
     
     <!-- TAB 1: Live Exam Monitor -->
@@ -362,12 +324,7 @@
               <div>
                 <label class="form-label">ระดับชั้น</label>
                 <select id="exam-grade" class="form-control" required>
-                  <option value="ม.1">ม.1</option>
-                  <option value="ม.2">ม.2</option>
-                  <option value="ม.3">ม.3</option>
-                  <option value="ม.4">ม.4</option>
-                  <option value="ม.5">ม.5</option>
-                  <option value="ม.6">ม.6</option>
+                  <!-- Populated dynamically from grades database -->
                 </select>
               </div>
             </div>
@@ -411,10 +368,7 @@
             <h3><i class="fa-solid fa-table-list" style="color: var(--accent-color);"></i> รายการตารางสอบทั้งหมด</h3>
             <div style="display: flex; gap: 0.5rem;">
               <select id="filter-exam-grade" class="form-control" style="width: auto; padding: 0.4rem 1rem;">
-                <option value="all">ทุกระดับชั้น</option>
-                <option value="ม.1">ม.1</option>
-                <option value="ม.2">ม.2</option>
-                <option value="ม.3">ม.3</option>
+                <!-- Populated dynamically -->
               </select>
             </div>
           </div>
@@ -426,10 +380,10 @@
                   <th>ระดับชั้น</th>
                   <th>วันที่</th>
                   <th>เวลา</th>
-                  <th>รหัสวิชา</th>
-                  <th>ชื่อวิชา</th>
+                  <th>รหัส/วิชาสอบ</th>
                   <th>ห้องสอบ</th>
                   <th>ประเภท</th>
+                  <th>การปล่อยข้อสอบ (Link Override)</th>
                   <th>จัดการ</th>
                 </tr>
               </thead>
@@ -442,8 +396,81 @@
       </div>
     </div>
     
-    <!-- TAB 3: Student Excel Import -->
-    <div id="tab-students" class="tab-content w-full hidden">
+    <!-- TAB 3: Student Database Viewer -->
+    <div id="tab-students-view" class="tab-content w-full hidden">
+      <div class="glass-card">
+        <div class="flex-between" style="margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
+          <h3><i class="fa-solid fa-address-book" style="color: var(--success-color);"></i> คลังข้อมูลนักเรียนในระบบ</h3>
+          <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; width: 100%; max-width: 600px; justify-content: flex-end;">
+            <input type="text" id="search-student-query" class="form-control" placeholder="ค้นหาโดยชื่อ หรือ รหัสประจำตัว..." style="max-width: 250px;">
+            <select id="filter-student-grade" class="form-control" style="width: auto; max-width: 140px;">
+              <!-- Dynamic options -->
+            </select>
+            <input type="text" id="filter-student-room" class="form-control" placeholder="ห้อง (เช่น 1)" style="width: 80px; text-align: center;">
+          </div>
+        </div>
+        
+        <div class="timetable-container" style="max-height: 500px;">
+          <table class="table-custom">
+            <thead>
+              <tr>
+                <th>เลขที่</th>
+                <th>รหัสประจำตัว (Username)</th>
+                <th>ชื่อ-นามสกุล</th>
+                <th>ระดับชั้น/ห้อง</th>
+                <th>รหัสผ่านเริ่มต้น</th>
+                <th>การจัดการ</th>
+              </tr>
+            </thead>
+            <tbody id="db-students-table-body">
+              <!-- Student rows populated dynamically -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 4: Dynamic Grades Management -->
+    <div id="tab-grades" class="tab-content w-full hidden">
+      <div style="display: grid; grid-template-columns: 350px 1fr; gap: 1.5rem; align-items: start;">
+        <!-- Add Grade Form -->
+        <div class="glass-card">
+          <h3><i class="fa-solid fa-folder-plus"></i> เพิ่มระดับชั้นเรียน</h3>
+          <p style="color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 1.25rem;">
+            กำหนดระดับชั้นของโรงเรียน (เช่น ม.1, ม.2, ม.3, ม.4, ม.5, ม.6) เพื่อนำไปใช้งานสร้างตารางและกรองข้อมูล
+          </p>
+          <form id="form-manage-grade">
+            <div class="form-group">
+              <label class="form-label">ชื่อระดับชั้น (เช่น ม.4 หรือ ม.5)</label>
+              <input type="text" id="new-grade-name" class="form-control" placeholder="กรอกชื่อชั้น (เช่น ม.4)" required>
+            </div>
+            <button type="submit" class="btn btn-accent"><i class="fa-solid fa-plus"></i> เพิ่มระดับชั้น</button>
+          </form>
+        </div>
+        
+        <!-- Grades List Table -->
+        <div class="glass-card">
+          <h3><i class="fa-solid fa-layer-group"></i> รายชื่อระดับชั้นเรียนทั้งหมด</h3>
+          <div class="timetable-container" style="max-height: 400px;">
+            <table class="table-custom">
+              <thead>
+                <tr>
+                  <th>ระดับชั้น (Grade)</th>
+                  <th>วันที่สร้างในระบบ</th>
+                  <th>การจัดการ</th>
+                </tr>
+              </thead>
+              <tbody id="db-grades-table-body">
+                <!-- Grades list populated dynamically -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 5: Student Excel Import -->
+    <div id="tab-students-import" class="tab-content w-full hidden">
       <div class="glass-card" style="max-width: 800px; margin: 0 auto;">
         <h3><i class="fa-regular fa-file-excel" style="color: var(--success-color);"></i> นำเข้าบัญชีนักเรียนผ่านไฟล์ Excel</h3>
         <p style="color: var(--text-secondary); margin-bottom: 1.5rem; font-size: 0.95rem;">
@@ -534,46 +561,6 @@
       </div>
     </div>
     
-    <!-- TAB 5: Firebase Database Configuration -->
-    <div id="tab-db-settings" class="tab-content w-full hidden">
-      <div class="glass-card" style="max-width: 600px; margin: 0 auto;">
-        <h3><i class="fa-solid fa-sliders" style="color: var(--accent-color);"></i> การเชื่อมต่อฐานข้อมูล Firebase</h3>
-        <p style="color: var(--text-secondary); margin-bottom: 1.5rem; font-size: 0.9rem;">
-          คุณสามารถแก้ไขข้อมูลเชื่อมต่อ หรือโอนย้ายระบบสอบออนไลน์นี้ไปยังโปรเจกต์ Firebase ตัวอื่นได้
-        </p>
-        
-        <form id="tab-config-form">
-          <div class="form-group">
-            <label class="form-label">API Key</label>
-            <input type="text" id="tab-config-apiKey" class="form-control" required>
-          </div>
-          <div class="form-group">
-            <label class="form-label">Auth Domain</label>
-            <input type="text" id="tab-config-authDomain" class="form-control" required>
-          </div>
-          <div class="form-group">
-            <label class="form-label">Project ID</label>
-            <input type="text" id="tab-config-projectId" class="form-control" required>
-          </div>
-          <div class="form-group">
-            <label class="form-label">Storage Bucket</label>
-            <input type="text" id="tab-config-storageBucket" class="form-control" required>
-          </div>
-          <div class="form-group">
-            <label class="form-label">Messaging Sender ID</label>
-            <input type="text" id="tab-config-messagingSenderId" class="form-control" required>
-          </div>
-          <div class="form-group">
-            <label class="form-label">App ID</label>
-            <input type="text" id="tab-config-appId" class="form-control" required>
-          </div>
-          <div style="display: flex; gap: 0.5rem; margin-top: 1.5rem;">
-            <button type="submit" class="btn btn-accent"><i class="fa-solid fa-arrows-rotate"></i> อัปเดตการตั้งค่า</button>
-            <button type="button" id="btn-reset-db-entirely" class="btn btn-danger"><i class="fa-solid fa-triangle-exclamation"></i> ล้างการเชื่อมต่อทั้งหมด</button>
-          </div>
-        </form>
-      </div>
-    </div>
   </div>
 
   <!-- 7. Interactive Docx Question Review Modal -->

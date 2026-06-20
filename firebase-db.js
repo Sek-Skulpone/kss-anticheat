@@ -183,6 +183,9 @@ export async function saveExam(exam) {
   if (!exam.examId) {
     exam.examId = exam.date + "_" + exam.subjectCode + "_" + Math.random().toString(36).substring(2, 7);
   }
+  if (!exam.linkStatus) {
+    exam.linkStatus = 'auto'; // Default link override status
+  }
   await store.collection('exams').doc(exam.examId).set(exam);
   return exam.examId;
 }
@@ -356,4 +359,66 @@ export async function unlockStudentSession(studentId, examId, teacherName) {
       violations: newViolations
     });
   });
+}
+
+// Update exam link override status
+export async function updateExamLinkStatus(examId, linkStatus) {
+  const store = checkDB();
+  await store.collection('exams').doc(examId).update({
+    linkStatus: linkStatus
+  });
+}
+
+/* ==========================================================================
+   5. DYNAMIC GRADES MANAGEMENT
+   ========================================================================== */
+
+export async function getGrades() {
+  const store = checkDB();
+  const snapshot = await store.collection('grades').get();
+  const list = [];
+  snapshot.forEach(doc => {
+    list.push(doc.data());
+  });
+  
+  // Bootstrap default grades if empty
+  if (list.length === 0) {
+    const defaults = ["ม.1", "ม.2", "ม.3"];
+    const batch = store.batch();
+    const now = new Date().toISOString();
+    
+    defaults.forEach(g => {
+      const docRef = store.collection('grades').doc(g);
+      const gradeObj = { name: g, createdAt: now };
+      batch.set(docRef, gradeObj);
+      list.push(gradeObj);
+    });
+    await batch.commit();
+  }
+  
+  // Sort grades alphabetically/numerically
+  list.sort((a, b) => a.name.localeCompare(b.name, 'th'));
+  return list;
+}
+
+export async function addGrade(gradeName) {
+  const store = checkDB();
+  const name = gradeName.trim();
+  if (!name) throw new Error("ชื่อระดับชั้นต้องไม่ว่างเปล่า");
+  
+  const docRef = store.collection('grades').doc(name);
+  const doc = await docRef.get();
+  if (doc.exists) {
+    throw new Error("มีระดับชั้นนี้ในระบบอยู่แล้ว");
+  }
+  
+  await docRef.set({
+    name: name,
+    createdAt: new Date().toISOString()
+  });
+}
+
+export async function deleteGrade(gradeName) {
+  const store = checkDB();
+  await store.collection('grades').doc(gradeName).delete();
 }
