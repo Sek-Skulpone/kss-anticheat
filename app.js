@@ -158,9 +158,19 @@ async function loadStudentTimetable() {
     Object.values(studentTimerIntervals).forEach(clearInterval);
     studentTimerIntervals = {};
     
+    const activePeriod = await dbManager.getActiveExamPeriod();
+    const titleEl = document.getElementById('student-timetable-title');
+    if (titleEl) {
+      titleEl.textContent = `ตารางสอบ${activePeriod.activeTerm} ประจำปีการศึกษา ${activePeriod.activeYear}`;
+    }
+    
     const exams = await dbManager.getExams();
-    // Filter exams for student's grade
-    const studentExams = exams.filter(ex => ex.grade === currentUser.grade);
+    // Filter exams for student's grade, active year, and active term
+    const studentExams = exams.filter(ex => 
+      ex.grade === currentUser.grade &&
+      ex.academicYear === activePeriod.activeYear &&
+      ex.term === activePeriod.activeTerm
+    );
     
     // Sort exams by date, then by start time
     studentExams.sort((a, b) => {
@@ -814,7 +824,7 @@ function disableAntiCheatListeners() {
    6. TEACHER PORTAL & LIVE CONTROLS (REAL-TIME MONITOR)
    ========================================================================== */
 
-function setupTeacherDashboard() {
+async function setupTeacherDashboard() {
   document.getElementById('teacher-display-name').textContent = `คุณครู ${currentUser.name}`;
   showScreen('screen-teacher-dashboard');
   
@@ -825,11 +835,16 @@ function setupTeacherDashboard() {
   startLiveMonitor();
   
   // Load initial data
-  loadGradesData();
-  loadAdminStudentsList();
-  loadAdminExamsList();
-  loadAdminTeachersList();
-  updateDBTotalStudentsStats();
+  await loadGradesData();
+  await loadAcademicYearsData();
+  await loadActivePeriodSettings();
+  await loadAdminStudentsList();
+  await loadAdminExamsList();
+  await loadAdminTeachersList();
+  await updateDBTotalStudentsStats();
+  
+  // Apply role security
+  checkTeacherPermissions();
 }
 
 function initializeTeacherTabRouter() {
@@ -943,6 +958,8 @@ const parsedQuestionsJson = document.getElementById('parsed-questions-json');
 const filterExamGrade = document.getElementById('filter-exam-grade');
 
 filterExamGrade.addEventListener('change', () => loadAdminExamsList());
+document.getElementById('filter-exam-year').addEventListener('change', () => loadAdminExamsList());
+document.getElementById('filter-exam-term').addEventListener('change', () => loadAdminExamsList());
 
 // Hide DOCX upload panel if Exam Type is Paper
 document.getElementById('exam-type').addEventListener('change', (e) => {
@@ -1150,7 +1167,9 @@ formManageExam.addEventListener('submit', async (e) => {
     grade: document.getElementById('exam-grade').value,
     room: document.getElementById('exam-room').value.trim(),
     examType: document.getElementById('exam-type').value,
-    questions: questions
+    questions: questions,
+    academicYear: document.getElementById('exam-academic-year').value,
+    term: document.getElementById('exam-term').value
   };
   
   if (examId) {
@@ -1184,6 +1203,15 @@ function resetExamInputForm() {
   document.getElementById('exam-room').value = '';
   document.getElementById('exam-type').value = 'online';
   
+  const examYearSelect = document.getElementById('exam-academic-year');
+  if (examYearSelect && examYearSelect.options.length > 0) {
+    examYearSelect.selectedIndex = 0;
+  }
+  const examTermSelect = document.getElementById('exam-term');
+  if (examTermSelect) {
+    examTermSelect.value = 'ปลายภาค';
+  }
+  
   document.getElementById('online-exam-upload-section').classList.remove('hidden');
   docxFileInput.value = '';
   docxUploadStatus.textContent = 'อัปโหลดไฟล์ข้อสอบเวิร์ดเพื่อแปลงระบบสอบ';
@@ -1197,8 +1225,20 @@ async function loadAdminExamsList() {
   try {
     const exams = await dbManager.getExams();
     const filterGrade = filterExamGrade.value;
+    const filterYear = document.getElementById('filter-exam-year').value;
+    const filterTerm = document.getElementById('filter-exam-term').value;
     
-    const filteredExams = filterGrade === 'all' ? exams : exams.filter(ex => ex.grade === filterGrade);
+    let filteredExams = exams;
+    
+    if (filterGrade !== 'all') {
+      filteredExams = filteredExams.filter(ex => ex.grade === filterGrade);
+    }
+    if (filterYear !== 'all') {
+      filteredExams = filteredExams.filter(ex => ex.academicYear === filterYear);
+    }
+    if (filterTerm !== 'all') {
+      filteredExams = filteredExams.filter(ex => ex.term === filterTerm);
+    }
     
     // Sort exams by date and start times
     filteredExams.sort((a, b) => {
@@ -1218,6 +1258,8 @@ async function loadAdminExamsList() {
       return;
     }
     
+    const isAdmin = currentUser && currentUser.username === 'admin';
+    
     filteredExams.forEach((ex) => {
       const tr = document.createElement('tr');
       const formattedDate = formatThaiDateShort(ex.date);
@@ -1228,12 +1270,27 @@ async function loadAdminExamsList() {
       
       let linkOverrideSelect = '-';
       if (isOnline) {
-        linkOverrideSelect = `
-          <select class="form-control" onchange="changeAdminExamLinkStatus('${ex.examId}', this.value)" style="width: auto; padding: 0.25rem 0.4rem; font-size: 0.85rem; margin: 0 auto; background: var(--input-bg); border-color: var(--input-border); color: var(--text-primary);">
-            <option value="auto" ${ex.linkStatus === 'auto' || !ex.linkStatus ? 'selected' : ''}>Auto (ตามเวลา)</option>
-            <option value="released" ${ex.linkStatus === 'released' ? 'selected' : ''}>ปล่อยลิงก์ทันที</option>
-            <option value="hidden" ${ex.linkStatus === 'hidden' ? 'selected' : ''}>ซ่อนลิงก์ข้อสอบ</option>
-          </select>
+        if (isAdmin) {
+          linkOverrideSelect = `
+            <select class="form-control" onchange="changeAdminExamLinkStatus('${ex.examId}', this.value)" style="width: auto; padding: 0.25rem 0.4rem; font-size: 0.85rem; margin: 0 auto; background: var(--input-bg); border-color: var(--input-border); color: var(--text-primary);">
+              <option value="auto" ${ex.linkStatus === 'auto' || !ex.linkStatus ? 'selected' : ''}>Auto (ตามเวลา)</option>
+              <option value="released" ${ex.linkStatus === 'released' ? 'selected' : ''}>ปล่อยลิงก์ทันที</option>
+              <option value="hidden" ${ex.linkStatus === 'hidden' ? 'selected' : ''}>ซ่อนลิงก์ข้อสอบ</option>
+            </select>
+          `;
+        } else {
+          const statusText = ex.linkStatus === 'released' ? 'ปล่อยลิงก์แล้ว' : (ex.linkStatus === 'hidden' ? 'ซ่อนลิงก์ข้อสอบ' : 'Auto (ตามเวลา)');
+          linkOverrideSelect = `<span style="font-size: 0.85rem; color: var(--text-secondary); font-weight: 500;">${statusText}</span>`;
+        }
+      }
+      
+      let actionButtons = '-';
+      if (isAdmin) {
+        actionButtons = `
+          <div class="action-buttons-cell">
+            <button class="btn btn-secondary btn-action" onclick="editAdminExam('${ex.examId}')" title="แก้ไขวิชานี้"><i class="fa-regular fa-edit"></i></button>
+            <button class="btn btn-danger btn-action" onclick="deleteAdminExam('${ex.examId}')" title="ลบวิชานี้"><i class="fa-regular fa-trash-can"></i></button>
+          </div>
         `;
       }
       
@@ -1241,7 +1298,7 @@ async function loadAdminExamsList() {
         <td><b>${ex.grade}</b></td>
         <td>${formattedDate}</td>
         <td>${formattedStartTime} น. - ${formattedEndTime} น.</td>
-        <td style="text-align: left;"><b style="color: var(--accent-color);">${ex.subjectCode}</b> ${ex.subjectName}</td>
+        <td style="text-align: left;"><b style="color: var(--accent-color);">${ex.subjectCode}</b> ${ex.subjectName} <span style="font-size: 0.75rem; color: var(--text-muted); display: block;">ปีการศึกษา ${ex.academicYear || '2568'} (${ex.term || 'ปลายภาค'})</span></td>
         <td>${ex.room || '-'}</td>
         <td>
           <span class="badge ${isOnline ? 'badge-link' : 'badge-paper'}" style="cursor: default; pointer-events: none;">
@@ -1249,12 +1306,7 @@ async function loadAdminExamsList() {
           </span>
         </td>
         <td>${linkOverrideSelect}</td>
-        <td>
-          <div class="action-buttons-cell">
-            <button class="btn btn-secondary btn-action" onclick="editAdminExam('${ex.examId}')" title="แก้ไขวิชานี้"><i class="fa-regular fa-edit"></i></button>
-            <button class="btn btn-danger btn-action" onclick="deleteAdminExam('${ex.examId}')" title="ลบวิชานี้"><i class="fa-regular fa-trash-can"></i></button>
-          </div>
-        </td>
+        <td>${actionButtons}</td>
       `;
       tbody.appendChild(tr);
     });
@@ -1279,6 +1331,8 @@ window.editAdminExam = async function(examId) {
     document.getElementById('exam-subject-name').value = exam.subjectName;
     document.getElementById('exam-room').value = exam.room || '';
     document.getElementById('exam-type').value = exam.examType;
+    document.getElementById('exam-academic-year').value = exam.academicYear || '2568';
+    document.getElementById('exam-term').value = exam.term || 'ปลายภาค';
     
     const uploadSec = document.getElementById('online-exam-upload-section');
     if (exam.examType === 'paper') {
@@ -1697,6 +1751,7 @@ function renderFilteredStudents() {
     return;
   }
   
+  const isAdmin = currentUser && currentUser.username === 'admin';
   filtered.forEach((s) => {
     const tr = document.createElement('tr');
     tr.innerHTML = `
@@ -1706,7 +1761,7 @@ function renderFilteredStudents() {
       <td>${s.grade}/${s.room}</td>
       <td style="font-family: monospace; font-size: 0.9rem; color: var(--text-muted);">${s.password}</td>
       <td>
-        <button class="btn btn-danger btn-action" onclick="deleteAdminStudent('${s.studentId}')" title="ลบรายชื่อนี้"><i class="fa-regular fa-trash-can"></i> ลบ</button>
+        ${isAdmin ? `<button class="btn btn-danger btn-action" onclick="deleteAdminStudent('${s.studentId}')" title="ลบรายชื่อนี้"><i class="fa-regular fa-trash-can"></i> ลบ</button>` : '-'}
       </td>
     `;
     tbody.appendChild(tr);
@@ -1730,6 +1785,179 @@ window.deleteAdminStudent = function(studentId) {
 document.getElementById('search-student-query').addEventListener('input', renderFilteredStudents);
 document.getElementById('filter-student-grade').addEventListener('change', renderFilteredStudents);
 document.getElementById('filter-student-room').addEventListener('input', renderFilteredStudents);
+
+/* ==========================================================================
+   13. DYNAMIC ACADEMIC YEARS INTERFACES
+   ========================================================================== */
+
+let currentYearsList = [];
+let activePeriodConfig = null;
+
+async function loadAcademicYearsData() {
+  try {
+    const years = await dbManager.getAcademicYears();
+    currentYearsList = years;
+    renderAdminYearsList(years);
+    populateYearDropdowns(years);
+  } catch (err) {
+    console.error("Failed to load academic years:", err);
+  }
+}
+
+function renderAdminYearsList(years) {
+  const tbody = document.getElementById('db-years-table-body');
+  if (!tbody) return;
+  tbody.innerHTML = '';
+  
+  years.forEach((y) => {
+    const tr = document.createElement('tr');
+    const formattedDate = y.createdAt ? formatThaiDateShort(y.createdAt) : '-';
+    tr.innerHTML = `
+      <td><b>${y.name}</b></td>
+      <td>${formattedDate}</td>
+      <td>
+        <button class="btn btn-danger btn-action" onclick="deleteAdminYear('${y.name}')" title="ลบปีการศึกษานี้"><i class="fa-regular fa-trash-can"></i> ลบ</button>
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+window.deleteAdminYear = function(yearName) {
+  if (confirm(`คุณแน่ใจว่าต้องการลบปีการศึกษา "${yearName}" หรือไม่? ข้อมูลตารางสอบที่เกี่ยวข้องจะยังคงอยู่ในระบบแต่ปีนี้จะหายไปจากตัวเลือก`)) {
+    dbManager.deleteAcademicYear(yearName)
+      .then(() => {
+        showNotification("ลบปีการศึกษาสำเร็จ");
+        loadAcademicYearsData();
+      })
+      .catch(err => {
+        showNotification("ลบล้มเหลว: " + err.message, true);
+      });
+  }
+};
+
+const formManageYear = document.getElementById('form-manage-year');
+if (formManageYear) {
+  formManageYear.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const nameInput = document.getElementById('new-year-name');
+    const name = nameInput.value.trim();
+    if (!name) return;
+    
+    try {
+      await dbManager.addAcademicYear(name);
+      showNotification(`เพิ่มปีการศึกษา ${name} สำเร็จ`);
+      nameInput.value = '';
+      await loadAcademicYearsData();
+    } catch (err) {
+      showNotification(err.message, true);
+    }
+  });
+}
+
+function populateYearDropdowns(years) {
+  const examYearSelect = document.getElementById('exam-academic-year');
+  if (examYearSelect) {
+    examYearSelect.innerHTML = '';
+    years.forEach(y => {
+      const opt = document.createElement('option');
+      opt.value = y.name;
+      opt.textContent = y.name;
+      examYearSelect.appendChild(opt);
+    });
+  }
+  
+  const filterYearSelect = document.getElementById('filter-exam-year');
+  if (filterYearSelect) {
+    const prevVal = filterYearSelect.value || 'all';
+    filterYearSelect.innerHTML = '<option value="all">ทุกปีการศึกษา</option>';
+    years.forEach(y => {
+      const opt = document.createElement('option');
+      opt.value = y.name;
+      opt.textContent = y.name;
+      filterYearSelect.appendChild(opt);
+    });
+    filterYearSelect.value = prevVal;
+  }
+  
+  const activeYearSelect = document.getElementById('active-setting-year');
+  if (activeYearSelect) {
+    activeYearSelect.innerHTML = '';
+    years.forEach(y => {
+      const opt = document.createElement('option');
+      opt.value = y.name;
+      opt.textContent = y.name;
+      activeYearSelect.appendChild(opt);
+    });
+    if (activePeriodConfig) {
+      activeYearSelect.value = activePeriodConfig.activeYear;
+    }
+  }
+}
+
+/* ==========================================================================
+   14. ACTIVE EXAM PERIOD INTERFACES & PERMISSIONS
+   ========================================================================== */
+
+async function loadActivePeriodSettings() {
+  try {
+    const config = await dbManager.getActiveExamPeriod();
+    activePeriodConfig = config;
+    
+    const activeYearSelect = document.getElementById('active-setting-year');
+    const activeTermSelect = document.getElementById('active-setting-term');
+    
+    if (activeYearSelect) activeYearSelect.value = config.activeYear;
+    if (activeTermSelect) activeTermSelect.value = config.activeTerm;
+  } catch (err) {
+    console.error("Failed to load active period settings:", err);
+  }
+}
+
+const formActivePeriod = document.getElementById('form-active-period-settings');
+if (formActivePeriod) {
+  formActivePeriod.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const activeYear = document.getElementById('active-setting-year').value;
+    const activeTerm = document.getElementById('active-setting-term').value;
+    
+    try {
+      await dbManager.saveActiveExamPeriod(activeYear, activeTerm);
+      showNotification("บันทึกการตั้งค่าช่วงเวลาสอบปัจจุบันสำเร็จ");
+      await loadActivePeriodSettings();
+    } catch (err) {
+      showNotification("บันทึกล้มเหลว: " + err.message, true);
+    }
+  });
+}
+
+function checkTeacherPermissions() {
+  const isAdmin = currentUser && currentUser.username === 'admin';
+  
+  // Tab elements
+  const tabImport = document.getElementById('tab-btn-students-import');
+  const tabGradesYears = document.getElementById('tab-btn-grades-years');
+  const tabTeachers = document.getElementById('tab-btn-teachers');
+  const examFormContainer = document.getElementById('admin-exam-form-container');
+  const timetableGrid = document.getElementById('timetable-tab-grid');
+  const btnClearDb = document.getElementById('btn-clear-student-db');
+  
+  if (isAdmin) {
+    if (tabImport) tabImport.classList.remove('hidden');
+    if (tabGradesYears) tabGradesYears.classList.remove('hidden');
+    if (tabTeachers) tabTeachers.classList.remove('hidden');
+    if (examFormContainer) examFormContainer.classList.remove('hidden');
+    if (timetableGrid) timetableGrid.style.gridTemplateColumns = '350px 1fr';
+    if (btnClearDb) btnClearDb.classList.remove('hidden');
+  } else {
+    if (tabImport) tabImport.classList.add('hidden');
+    if (tabGradesYears) tabGradesYears.classList.add('hidden');
+    if (tabTeachers) tabTeachers.classList.add('hidden');
+    if (examFormContainer) examFormContainer.classList.add('hidden');
+    if (timetableGrid) timetableGrid.style.gridTemplateColumns = '1fr';
+    if (btnClearDb) btnClearDb.classList.add('hidden');
+  }
+}
 
 // Init bootstrap app load
 window.addEventListener('DOMContentLoaded', () => {

@@ -244,7 +244,9 @@ export async function startOrCreateExamSession(student, exam) {
     submittedAt: null,
     answers: {},
     score: 0,
-    maxScore: exam.questions ? exam.questions.length : 0
+    maxScore: exam.questions ? exam.questions.length : 0,
+    academicYear: exam.academicYear || '',
+    term: exam.term || ''
   };
   
   await docRef.set(newSession);
@@ -422,3 +424,86 @@ export async function deleteGrade(gradeName) {
   const store = checkDB();
   await store.collection('grades').doc(gradeName).delete();
 }
+
+/* ==========================================================================
+   6. DYNAMIC ACADEMIC YEARS MANAGEMENT
+   ========================================================================== */
+
+export async function getAcademicYears() {
+  const store = checkDB();
+  const snapshot = await store.collection('academic_years').get();
+  const list = [];
+  snapshot.forEach(doc => {
+    list.push(doc.data());
+  });
+  
+  // Bootstrap default academic years if empty
+  if (list.length === 0) {
+    const defaults = ["2568"];
+    const batch = store.batch();
+    const now = new Date().toISOString();
+    
+    defaults.forEach(y => {
+      const docRef = store.collection('academic_years').doc(y);
+      const yearObj = { name: y, createdAt: now };
+      batch.set(docRef, yearObj);
+      list.push(yearObj);
+    });
+    await batch.commit();
+  }
+  
+  list.sort((a, b) => b.name.localeCompare(a.name)); // Descending order
+  return list;
+}
+
+export async function addAcademicYear(yearName) {
+  const store = checkDB();
+  const name = yearName.trim();
+  if (!name) throw new Error("ปีการศึกษาต้องไม่ว่างเปล่า");
+  
+  const docRef = store.collection('academic_years').doc(name);
+  const doc = await docRef.get();
+  if (doc.exists) {
+    throw new Error("มีปีการศึกษานี้ในระบบอยู่แล้ว");
+  }
+  
+  await docRef.set({
+    name: name,
+    createdAt: new Date().toISOString()
+  });
+}
+
+export async function deleteAcademicYear(yearName) {
+  const store = checkDB();
+  await store.collection('academic_years').doc(yearName).delete();
+}
+
+/* ==========================================================================
+   7. ACTIVE EXAM PERIOD SETTINGS
+   ========================================================================== */
+
+export async function getActiveExamPeriod() {
+  const store = checkDB();
+  const docRef = store.collection('settings').doc('active_period');
+  const doc = await docRef.get();
+  if (doc.exists) {
+    return doc.data();
+  }
+  
+  const defaultPeriod = {
+    activeYear: "2568",
+    activeTerm: "ปลายภาค"
+  };
+  await store.collection('settings').doc('active_period').set(defaultPeriod);
+  return defaultPeriod;
+}
+
+export async function saveActiveExamPeriod(activeYear, activeTerm) {
+  const store = checkDB();
+  await store.collection('settings').doc('active_period').set({
+    activeYear: activeYear,
+    activeTerm: activeTerm,
+    updatedAt: new Date().toISOString()
+  });
+}
+

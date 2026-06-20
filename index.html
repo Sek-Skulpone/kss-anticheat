@@ -103,7 +103,7 @@
           <path d="M50,5 L50,11 M50,89 L50,95 M5,50 L11,50 M89,50 L95,50" stroke="#d4af37" stroke-width="2"/>
         </svg>
         <div class="timetable-title">โรงเรียนโคกสีวิทยาสรรค์</div>
-        <div class="timetable-title">ตารางสอบปลายภาค ภาคเรียนที่ 2/2568</div>
+        <div class="timetable-title" id="student-timetable-title">ตารางสอบปลายภาค ภาคเรียนที่ 2/2568</div>
         <div class="timetable-subtitle" id="student-timetable-title-meta">ชั้นมัธยมศึกษาปีที่ 2</div>
       </div>
       
@@ -229,12 +229,12 @@
     
     <!-- Tab Controls -->
     <div class="tabs-nav w-full">
-      <button class="tab-link active" data-target="tab-live-monitor"><i class="fa-solid fa-tv"></i> คุมสอบเรียลไทม์ & ปลดล็อก</button>
-      <button class="tab-link" data-target="tab-timetable"><i class="fa-solid fa-calendar-days"></i> จัดการตารางสอบ & ข้อสอบ</button>
-      <button class="tab-link" data-target="tab-students-view"><i class="fa-solid fa-address-book"></i> ฐานข้อมูลนักเรียน</button>
-      <button class="tab-link" data-target="tab-students-import"><i class="fa-solid fa-file-excel"></i> นำเข้าข้อมูลนักเรียน (Excel)</button>
-      <button class="tab-link" data-target="tab-grades"><i class="fa-solid fa-layer-group"></i> จัดการระดับชั้น</button>
-      <button class="tab-link" data-target="tab-teachers"><i class="fa-solid fa-user-gear"></i> บัญชีครู</button>
+      <button class="tab-link active" data-target="tab-live-monitor" id="tab-btn-live-monitor"><i class="fa-solid fa-tv"></i> คุมสอบเรียลไทม์ & ปลดล็อก</button>
+      <button class="tab-link" data-target="tab-timetable" id="tab-btn-timetable"><i class="fa-solid fa-calendar-days"></i> จัดการตารางสอบ & ข้อสอบ</button>
+      <button class="tab-link" data-target="tab-students-view" id="tab-btn-students-view"><i class="fa-solid fa-address-book"></i> ฐานข้อมูลนักเรียน</button>
+      <button class="tab-link" data-target="tab-students-import" id="tab-btn-students-import"><i class="fa-solid fa-file-excel"></i> นำเข้าข้อมูลนักเรียน (Excel)</button>
+      <button class="tab-link" data-target="tab-grades" id="tab-btn-grades-years"><i class="fa-solid fa-layer-group"></i> จัดการระดับชั้น & ปีการศึกษา</button>
+      <button class="tab-link" data-target="tab-teachers" id="tab-btn-teachers"><i class="fa-solid fa-user-gear"></i> บัญชีครู</button>
     </div>
     
     <!-- TAB 1: Live Exam Monitor -->
@@ -292,9 +292,9 @@
     
     <!-- TAB 2: Timetable & Exam Management -->
     <div id="tab-timetable" class="tab-content w-full hidden">
-      <div style="display: grid; grid-template-columns: 350px 1fr; gap: 1.5rem; align-items: start;">
+      <div id="timetable-tab-grid" style="display: grid; grid-template-columns: 350px 1fr; gap: 1.5rem; align-items: start;">
         <!-- Left: Form to Add/Edit Exam -->
-        <div class="glass-card" style="padding: 1.5rem;">
+        <div id="admin-exam-form-container" class="glass-card" style="padding: 1.5rem;">
           <h3 id="exam-form-title" style="margin-bottom: 1rem; color: var(--accent-color);"><i class="fa-solid fa-plus-circle"></i> เพิ่มตารางสอบ</h3>
           <form id="form-manage-exam">
             <input type="hidden" id="manage-exam-id">
@@ -343,6 +343,21 @@
                 <option value="paper">Paper (สอบกระดาษคำตอบ)</option>
               </select>
             </div>
+            <div class="form-group" style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
+              <div>
+                <label class="form-label">ปีการศึกษา</label>
+                <select id="exam-academic-year" class="form-control" required>
+                  <!-- Populated dynamically -->
+                </select>
+              </div>
+              <div>
+                <label class="form-label">ประเภทการสอบ</label>
+                <select id="exam-term" class="form-control" required>
+                  <option value="กลางภาค">กลางภาค</option>
+                  <option value="ปลายภาค">ปลายภาค</option>
+                </select>
+              </div>
+            </div>
             
             <div id="online-exam-upload-section" class="form-group">
               <label class="form-label">ข้อสอบออนไลน์ (.docx)</label>
@@ -362,11 +377,19 @@
           </form>
         </div>
         
-        <!-- Right: Timetable Schedule Table List -->
+         <!-- Right: Timetable Schedule Table List -->
         <div class="glass-card" style="padding: 1.5rem;">
-          <div class="flex-between" style="margin-bottom: 1rem;">
+          <div class="flex-between" style="margin-bottom: 1rem; flex-wrap: wrap; gap: 0.5rem;">
             <h3><i class="fa-solid fa-table-list" style="color: var(--accent-color);"></i> รายการตารางสอบทั้งหมด</h3>
-            <div style="display: flex; gap: 0.5rem;">
+            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+              <select id="filter-exam-year" class="form-control" style="width: auto; padding: 0.4rem 1rem;">
+                <!-- Populated dynamically -->
+              </select>
+              <select id="filter-exam-term" class="form-control" style="width: auto; padding: 0.4rem 1rem;">
+                <option value="all">ทุกประเภทสอบ</option>
+                <option value="กลางภาค">กลางภาค</option>
+                <option value="ปลายภาค">ปลายภาค</option>
+              </select>
               <select id="filter-exam-grade" class="form-control" style="width: auto; padding: 0.4rem 1rem;">
                 <!-- Populated dynamically -->
               </select>
@@ -430,42 +453,110 @@
       </div>
     </div>
 
-    <!-- TAB 4: Dynamic Grades Management -->
+    <!-- TAB 4: Dynamic Grades & Academic Years Management -->
     <div id="tab-grades" class="tab-content w-full hidden">
-      <div style="display: grid; grid-template-columns: 350px 1fr; gap: 1.5rem; align-items: start;">
-        <!-- Add Grade Form -->
-        <div class="glass-card">
-          <h3><i class="fa-solid fa-folder-plus"></i> เพิ่มระดับชั้นเรียน</h3>
-          <p style="color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 1.25rem;">
-            กำหนดระดับชั้นของโรงเรียน (เช่น ม.1, ม.2, ม.3, ม.4, ม.5, ม.6) เพื่อนำไปใช้งานสร้างตารางและกรองข้อมูล
-          </p>
-          <form id="form-manage-grade">
-            <div class="form-group">
-              <label class="form-label">ชื่อระดับชั้น (เช่น ม.4 หรือ ม.5)</label>
-              <input type="text" id="new-grade-name" class="form-control" placeholder="กรอกชื่อชั้น (เช่น ม.4)" required>
-            </div>
-            <button type="submit" class="btn btn-accent"><i class="fa-solid fa-plus"></i> เพิ่มระดับชั้น</button>
-          </form>
-        </div>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; align-items: start;">
         
-        <!-- Grades List Table -->
-        <div class="glass-card">
-          <h3><i class="fa-solid fa-layer-group"></i> รายชื่อระดับชั้นเรียนทั้งหมด</h3>
-          <div class="timetable-container" style="max-height: 400px;">
-            <table class="table-custom">
-              <thead>
-                <tr>
-                  <th>ระดับชั้น (Grade)</th>
-                  <th>วันที่สร้างในระบบ</th>
-                  <th>การจัดการ</th>
-                </tr>
-              </thead>
-              <tbody id="db-grades-table-body">
-                <!-- Grades list populated dynamically -->
-              </tbody>
-            </table>
+        <!-- Column 1: Grades Management -->
+        <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+          <!-- Add Grade Form -->
+          <div class="glass-card">
+            <h3><i class="fa-solid fa-folder-plus"></i> เพิ่มระดับชั้นเรียน</h3>
+            <p style="color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 1.25rem;">
+              กำหนดระดับชั้นของโรงเรียน (เช่น ม.1, ม.2, ม.3, ม.4, ม.5, ม.6) เพื่อนำไปใช้งานสร้างตารางและกรองข้อมูล
+            </p>
+            <form id="form-manage-grade">
+              <div class="form-group">
+                <label class="form-label">ชื่อระดับชั้น (เช่น ม.4 หรือ ม.5)</label>
+                <input type="text" id="new-grade-name" class="form-control" placeholder="กรอกชื่อชั้น (เช่น ม.4)" required>
+              </div>
+              <button type="submit" class="btn btn-accent"><i class="fa-solid fa-plus"></i> เพิ่มระดับชั้น</button>
+            </form>
+          </div>
+          
+          <!-- Grades List Table -->
+          <div class="glass-card">
+            <h3><i class="fa-solid fa-layer-group"></i> รายชื่อระดับชั้นเรียนทั้งหมด</h3>
+            <div class="timetable-container" style="max-height: 300px;">
+              <table class="table-custom">
+                <thead>
+                  <tr>
+                    <th>ระดับชั้น (Grade)</th>
+                    <th>วันที่สร้างในระบบ</th>
+                    <th>การจัดการ</th>
+                  </tr>
+                </thead>
+                <tbody id="db-grades-table-body">
+                  <!-- Grades list populated dynamically -->
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
+
+        <!-- Column 2: Academic Years & Active Period Settings -->
+        <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+          <!-- Add Academic Year Form -->
+          <div class="glass-card">
+            <h3><i class="fa-solid fa-calendar-plus"></i> เพิ่มปีการศึกษา</h3>
+            <p style="color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 1.25rem;">
+              กำหนดปีการศึกษาของโรงเรียน (เช่น 2568, 2569) เพื่อนำไปใช้เป็นตัวเลือกจัดกลุ่มข้อสอบ
+            </p>
+            <form id="form-manage-year">
+              <div class="form-group">
+                <label class="form-label">ปีการศึกษา (เช่น 2568)</label>
+                <input type="text" id="new-year-name" class="form-control" placeholder="กรอกปีการศึกษา (เช่น 2569)" required>
+              </div>
+              <button type="submit" class="btn btn-accent"><i class="fa-solid fa-plus"></i> เพิ่มปีการศึกษา</button>
+            </form>
+          </div>
+
+          <!-- Academic Years List Table -->
+          <div class="glass-card">
+            <h3><i class="fa-solid fa-calendar-days"></i> รายชื่อปีการศึกษาทั้งหมด</h3>
+            <div class="timetable-container" style="max-height: 250px;">
+              <table class="table-custom">
+                <thead>
+                  <tr>
+                    <th>ปีการศึกษา</th>
+                    <th>วันที่สร้าง</th>
+                    <th>การจัดการ</th>
+                  </tr>
+                </thead>
+                <tbody id="db-years-table-body">
+                  <!-- Years list populated dynamically -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Active Period Settings Panel -->
+          <div class="glass-card" style="border: 2px solid var(--accent-color);">
+            <h3 style="color: var(--accent-color);"><i class="fa-solid fa-sliders"></i> ตั้งค่าช่วงเวลาสอบปัจจุบัน</h3>
+            <p style="color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 1.25rem;">
+              กำหนดว่าปีการศึกษาและภาคเรียนใดที่จะแสดงผลแก่นักเรียนเมื่อเข้าสู่ระบบ
+            </p>
+            <form id="form-active-period-settings">
+              <div class="form-group" style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
+                <div>
+                  <label class="form-label">ปีการศึกษาปัจจุบัน</label>
+                  <select id="active-setting-year" class="form-control" required>
+                    <!-- Loaded dynamically -->
+                  </select>
+                </div>
+                <div>
+                  <label class="form-label">ประเภทการสอบปัจจุบัน</label>
+                  <select id="active-setting-term" class="form-control" required>
+                    <option value="กลางภาค">กลางภาค</option>
+                    <option value="ปลายภาค">ปลายภาค</option>
+                  </select>
+                </div>
+              </div>
+              <button type="submit" class="btn btn-primary" style="background: var(--accent-color); color: #11221b;"><i class="fa-solid fa-floppy-disk"></i> บันทึกการตั้งค่าตารางสอบปัจจุบัน</button>
+            </form>
+          </div>
+        </div>
+
       </div>
     </div>
 
