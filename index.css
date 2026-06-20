@@ -16,7 +16,7 @@
   --card-border: rgba(47, 79, 79, 0.15);
   --text-primary: #1c2b2b;      /* Dark slate text */
   --text-secondary: #425c5c;    /* Medium slate secondary */
-  --text-muted: #759292;
+  --text-muted: #5c7777;        /* Darker slate-teal for better contrast */
   --input-bg: #ffffff;
   --input-border: rgba(47, 79, 79, 0.22);
   
@@ -35,7 +35,7 @@
   --card-border: rgba(47, 79, 79, 0.15);
   --text-primary: #1c2b2b;
   --text-secondary: #425c5c;
-  --text-muted: #759292;
+  --text-muted: #5c7777;        /* Darker slate-teal for better contrast */
   --input-bg: #ffffff;
   --input-border: rgba(47, 79, 79, 0.25);
   --input-border-focus: var(--primary-color);
@@ -371,7 +371,7 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .table-custom tr:hover {
-  background-color: rgba(255, 255, 255, 0.03);
+  background-color: rgba(47, 79, 79, 0.04);
 }
 
 .table-custom .day-cell {
@@ -381,10 +381,10 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .table-custom .lunch-row {
-  background-color: rgba(255, 255, 255, 0.05);
-  color: var(--text-muted);
-  font-weight: 500;
-  letter-spacing: 0.1em;
+  background-color: rgba(218, 165, 32, 0.08); /* Light gold tint */
+  color: var(--primary-color);
+  font-weight: 600;
+  letter-spacing: 0.15em;
 }
 
 .badge {
@@ -423,8 +423,8 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .badge-ended {
-  background-color: rgba(255, 255, 255, 0.05);
-  color: var(--text-muted);
+  background-color: rgba(47, 79, 79, 0.08);
+  color: var(--text-secondary);
 }
 
 /* Tabs Navigation in Dashboards */
@@ -473,7 +473,7 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .stat-card {
-  background: rgba(255, 255, 255, 0.03);
+  background: rgba(255, 255, 255, 0.65);
   border: 1px solid var(--card-border);
   border-radius: 12px;
   padding: 1.5rem;
@@ -529,7 +529,7 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .question-card {
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--card-bg);
   border: 1px solid var(--card-border);
   border-radius: 12px;
   padding: 1.75rem;
@@ -766,7 +766,7 @@ h1, h2, h3, h4, h5, h6 {
 
 .warning-modal-body {
   font-size: 0.95rem;
-  color: var(--text-secondary);
+  color: rgba(255, 255, 255, 0.85);
   margin-bottom: 1.5rem;
   line-height: 1.5;
 }
@@ -902,7 +902,7 @@ h1, h2, h3, h4, h5, h6 {
   right: 2rem;
   background: rgba(20, 35, 30, 0.95);
   border: 1px solid var(--success-color);
-  color: var(--text-primary);
+  color: #ffffff;
   padding: 1rem 1.5rem;
   border-radius: 8px;
   box-shadow: var(--shadow-lg);
@@ -1000,4 +1000,62 @@ h1, h2, h3, h4, h5, h6 {
   height: 8px;
   border-radius: 50%;
   background: #2a9d8f;
+}
+
+/* Ensure high contrast for secondary buttons in dark containers */
+.app-topbar .btn-secondary,
+.warning-modal-content .btn-secondary {
+  color: #ffffff !important;
+  background: rgba(255, 255, 255, 0.1) !important;
+  border-color: rgba(255, 255, 255, 0.15) !important;
+}
+
+.app-topbar .btn-secondary:hover,
+.warning-modal-content .btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.18) !important;
+  border-color: rgba(255, 255, 255, 0.3) !important;
+}
+
+/* Ensure high contrast for primary buttons in warning/confirmation modals */
+.warning-modal-content .btn-primary {
+  background: var(--accent-color) !important;
+  color: #11221b !important;
+  border-color: var(--accent-color) !important;
+}
+
+.warning-modal-content .btn-primary:hover {
+  background: #c7951a !important;
+  border-color: #c7951a !important;
+}
+
+/* Ensure high contrast for student exam sidebar forms and navigator buttons */
+.exam-sidebar .form-label {
+  color: rgba(255, 255, 255, 0.8) !important;
+}
+
+.exam-sidebar .nav-btn {
+  color: rgba(255, 255, 255, 0.75) !important;
+  background: rgba(255, 255, 255, 0.08) !important;
+  border-color: rgba(255, 255, 255, 0.15) !important;
+}
+
+.exam-sidebar .nav-btn.answered {
+  background: var(--primary-color) !important;
+  color: var(--accent-color) !important;
+  border-color: var(--accent-color) !important;
+}
+
+.exam-sidebar .nav-btn.active {
+  background: var(--accent-color) !important;
+  color: #0b1511 !important;
+  border-color: var(--accent-color) !important;
+}
+
+/* High contrast notification toast icons */
+.notification-toast .fa-circle-check {
+  color: #00e676 !important; /* Bright high-contrast green */
+}
+
+.notification-toast.error-toast .fa-circle-exclamation {
+  color: #ff5252 !important; /* Bright high-contrast red */
 }

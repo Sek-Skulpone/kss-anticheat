@@ -916,7 +916,7 @@ function startLiveMonitor() {
           </button>
         `;
       } else if (s.status === 'submitted') {
-        statusHtml = `<span class="badge" style="background: rgba(255, 255, 255, 0.05); color: var(--text-muted);"><i class="fa-regular fa-circle-check"></i> ส่งคำตอบแล้ว (${s.score}/${s.maxScore} คะแนน)</span>`;
+        statusHtml = `<span class="badge" style="background: rgba(47, 79, 79, 0.08); color: var(--text-secondary);"><i class="fa-regular fa-circle-check"></i> ส่งคำตอบแล้ว (${s.score}/${s.maxScore} คะแนน)</span>`;
       }
       
       tr.innerHTML = `
