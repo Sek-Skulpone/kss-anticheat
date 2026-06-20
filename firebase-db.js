@@ -2,6 +2,16 @@
 
 let db = null;
 
+// Default Firebase Configuration for KSS School
+const defaultFirebaseConfig = {
+  apiKey: "AIzaSyATLsG-Zyeme9jqanzDS3eI5c57pgrwb3g",
+  authDomain: "kssanticheat.firebaseapp.com",
+  projectId: "kssanticheat",
+  storageBucket: "kssanticheat.firebasestorage.app",
+  messagingSenderId: "184077478712",
+  appId: "1:184077478712:web:9208e293d0f6080ac52fcd"
+};
+
 export function isFirebaseInitialized() {
   return db !== null;
 }
@@ -25,14 +35,17 @@ export function initFirebase(config) {
   }
 }
 
-// Auto-init if configuration is saved in localStorage
+// Auto-init if configuration is saved in localStorage, or fallback to school default
 const savedConfig = localStorage.getItem('kss_firebase_config');
 if (savedConfig) {
   try {
     initFirebase(JSON.parse(savedConfig));
   } catch (e) {
-    console.error("Auto-init failed:", e);
+    console.error("Auto-init from localStorage failed:", e);
+    initFirebase(defaultFirebaseConfig);
   }
+} else {
+  initFirebase(defaultFirebaseConfig);
 }
 
 // Generic Helper to check DB initialization
