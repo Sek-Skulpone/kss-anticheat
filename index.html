@@ -1,0 +1,642 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ระบบสอบออนไลน์ปลอดภัย | โรงเรียนโคกสีวิทยาสรรค์</title>
+  <!-- Google Fonts & FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="index.css">
+</head>
+<body>
+
+  <!-- Background Decorative Glowing Spheres -->
+  <div class="glow-sphere sphere-1"></div>
+  <div class="glow-sphere sphere-2"></div>
+  <div class="glow-sphere sphere-3"></div>
+
+  <!-- Notification Toast -->
+  <div id="toast" class="notification-toast">
+    <i class="fa-solid fa-circle-check"></i>
+    <span id="toast-message">บันทึกข้อมูลสำเร็จ</span>
+  </div>
+
+  <!-- 1. Firebase Config Setup Screen -->
+  <div id="screen-config" class="screen hidden">
+    <div class="glass-card" style="max-width: 500px; width: 100%;">
+      <h2 class="app-title"><i class="fa-solid fa-database" style="color: var(--accent-color);"></i> เชื่อมต่อ Firebase</h2>
+      <p class="app-subtitle">กรอกข้อมูลการตั้งค่าสำหรับจัดเก็บฐานข้อมูลระบบสอบ</p>
+      
+      <div class="config-info">
+        <i class="fa-solid fa-circle-info"></i> คัดลอกโค้ดคอนฟิกจาก Firebase Console (Firestore Database) ข้อมูลจะบันทึกปลอดภัยในบราวเซอร์นี้โดยไม่รั่วไหลไปภายนอก
+      </div>
+      
+      <form id="config-form">
+        <div class="form-group">
+          <label class="form-label">API Key</label>
+          <input type="text" id="config-apiKey" class="form-control" placeholder="AIzaSy..." required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Auth Domain</label>
+          <input type="text" id="config-authDomain" class="form-control" placeholder="project-id.firebaseapp.com" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Project ID</label>
+          <input type="text" id="config-projectId" class="form-control" placeholder="project-id" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Storage Bucket</label>
+          <input type="text" id="config-storageBucket" class="form-control" placeholder="project-id.appspot.com" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Messaging Sender ID</label>
+          <input type="text" id="config-messagingSenderId" class="form-control" placeholder="1234567890" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">App ID</label>
+          <input type="text" id="config-appId" class="form-control" placeholder="1:1234:web:abcd" required>
+        </div>
+        <button type="submit" class="btn btn-accent"><i class="fa-solid fa-plug"></i> บันทึกและเชื่อมต่อ</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- 2. Login Screen (Students & Teachers) -->
+  <div id="screen-login" class="screen hidden">
+    <div class="glass-card" style="max-width: 450px; width: 100%;">
+      <div style="text-align: center; margin-bottom: 1.5rem;">
+        <svg class="school-logo" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+          <!-- Stylized School Emblem representation with sun/rays and flame -->
+          <circle cx="50" cy="50" r="45" fill="#1b4d3e" stroke="#d4af37" stroke-width="3"/>
+          <path d="M50,15 C55,30 65,35 65,50 C65,65 50,75 50,85 C50,75 35,65 35,50 C35,35 45,30 50,15 Z" fill="#d4af37"/>
+          <circle cx="50" cy="50" r="10" fill="#1b4d3e" stroke="#d4af37" stroke-width="2"/>
+          <circle cx="50" cy="50" r="4" fill="#d4af37"/>
+          <!-- Sun rays -->
+          <path d="M50,5 L50,11 M50,89 L50,95 M5,50 L11,50 M89,50 L95,50 M18,18 L23,23 M77,77 L82,82 M18,82 L23,77 M77,18 L82,23" stroke="#d4af37" stroke-width="2"/>
+        </svg>
+      </div>
+      <h2 class="app-title">โรงเรียนโคกสีวิทยาสรรค์</h2>
+      <p class="app-subtitle" style="margin-bottom: 1.5rem;">ระบบสอบปลายภาคออนไลน์ปลอดภัย</p>
+      
+      <!-- Login Toggle Tabs -->
+      <div class="tabs-nav" style="border: none; justify-content: center; margin-bottom: 1.5rem;">
+        <button id="toggle-student-login" class="tab-link active" style="flex: 1;"><i class="fa-solid fa-graduation-cap"></i> นักเรียน</button>
+        <button id="toggle-teacher-login" class="tab-link" style="flex: 1;"><i class="fa-solid fa-chalkboard-user"></i> คุณครู</button>
+      </div>
+      
+      <!-- Student Login Form -->
+      <form id="form-student-login">
+        <div class="form-group">
+          <label class="form-label">เลขประจำตัวนักเรียน</label>
+          <input type="text" id="student-username" class="form-control" placeholder="กรอกรหัสประจำตัว 5 หลัก" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">รหัสผ่าน (ใช้เลขประจำตัว)</label>
+          <input type="password" id="student-password" class="form-control" placeholder="กรอกรหัสผ่าน" required>
+        </div>
+        <button type="submit" class="btn btn-primary"><i class="fa-solid fa-right-to-bracket"></i> ลงชื่อเข้าสอบ</button>
+      </form>
+      
+      <!-- Teacher Login Form -->
+      <form id="form-teacher-login" class="hidden">
+        <div class="form-group">
+          <label class="form-label">ชื่อผู้ใช้ (Username)</label>
+          <input type="text" id="teacher-username" class="form-control" placeholder="กรอกชื่อผู้ใช้ของครู" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">รหัสผ่าน</label>
+          <input type="password" id="teacher-password" class="form-control" placeholder="กรอกรหัสผ่าน" required>
+        </div>
+        <button type="submit" class="btn btn-accent"><i class="fa-solid fa-user-shield"></i> ลงชื่อเข้าใช้แผงควบคุม</button>
+      </form>
+      
+      <div style="text-align: center; margin-top: 1.5rem; font-size: 0.8rem; color: var(--text-muted);">
+        สพม. สกลนคร | <a href="#" id="link-reset-firebase" style="color: var(--accent-color); text-decoration: none;">ตั้งค่าฐานข้อมูลใหม่</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. Student Dashboard Screen -->
+  <div id="screen-student-dashboard" class="screen hidden">
+    <!-- Topbar -->
+    <div class="app-topbar w-full" style="border-radius: 12px; margin-bottom: 1.5rem;">
+      <div style="display: flex; align-items: center; gap: 1rem;">
+        <svg style="width: 40px; height: 40px;" viewBox="0 0 100 100">
+          <circle cx="50" cy="50" r="45" fill="#1b4d3e" stroke="#d4af37" stroke-width="3"/>
+          <path d="M50,15 C55,30 65,35 65,50 C65,65 50,75 50,85 C50,75 35,65 35,50 C35,35 45,30 50,15 Z" fill="#d4af37"/>
+        </svg>
+        <div>
+          <h3 style="font-size: 1.1rem;" id="student-display-name">เด็กชายสมชาย ใจดี</h3>
+          <span style="font-size: 0.8rem; color: var(--accent-color);" id="student-display-meta">ม.2/1 | เลขที่ 1</span>
+        </div>
+      </div>
+      <button class="btn btn-danger btn-action" id="btn-student-logout" style="width: auto;"><i class="fa-solid fa-right-from-bracket"></i> ออกจากระบบ</button>
+    </div>
+    
+    <div class="glass-card w-full">
+      <div class="timetable-header-custom">
+        <svg class="school-logo" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="50" cy="50" r="45" fill="#1b4d3e" stroke="#d4af37" stroke-width="3"/>
+          <path d="M50,15 C55,30 65,35 65,50 C65,65 50,75 50,85 C50,75 35,65 35,50 C35,35 45,30 50,15 Z" fill="#d4af37"/>
+          <circle cx="50" cy="50" r="10" fill="#1b4d3e" stroke="#d4af37" stroke-width="2"/>
+          <path d="M50,5 L50,11 M50,89 L50,95 M5,50 L11,50 M89,50 L95,50" stroke="#d4af37" stroke-width="2"/>
+        </svg>
+        <div class="timetable-title">โรงเรียนโคกสีวิทยาสรรค์</div>
+        <div class="timetable-title">ตารางสอบปลายภาค ภาคเรียนที่ 2/2568</div>
+        <div class="timetable-subtitle" id="student-timetable-title-meta">ชั้นมัธยมศึกษาปีที่ 2</div>
+      </div>
+      
+      <!-- Date filters tab bar -->
+      <div class="tabs-nav" id="student-dates-tabs" style="justify-content: center; margin-bottom: 1rem;">
+        <!-- Dynamically generated buttons for dates e.g. "พุธที่ 4 มี.ค.", "พฤหัสฯที่ 5 มี.ค." -->
+      </div>
+      
+      <!-- Timetable Data -->
+      <div class="timetable-container">
+        <table class="table-custom" id="student-timetable-table">
+          <thead>
+            <tr>
+              <th style="width: 15%;">วันเดือนปี</th>
+              <th style="width: 20%;">เวลาสอบ</th>
+              <th style="width: 10%;">รวม (นาที)</th>
+              <th style="width: 12%;">รหัสวิชา</th>
+              <th style="width: 20%;">วิชาสอบ</th>
+              <th style="width: 10%;">ห้องสอบ</th>
+              <th style="width: 13%;">หมายเหตุ</th>
+            </tr>
+          </thead>
+          <tbody id="student-timetable-body">
+            <!-- Dynamically populated rows matching official design -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4. Active Exam Screen -->
+  <div id="screen-exam-session" class="screen hidden" style="max-width: 100%; padding: 1rem;">
+    <!-- Active Exam TopBar -->
+    <div class="app-topbar w-full" style="border-radius: 8px; margin-bottom: 1rem; padding: 0.75rem 1.5rem;">
+      <div style="display: flex; align-items: center; gap: 0.75rem;">
+        <i class="fa-solid fa-shield-halved" style="color: var(--success-color); font-size: 1.5rem;"></i>
+        <div>
+          <span style="font-weight: 700; color: #fff;" id="exam-display-subject">ค22102 คณิตศาสตร์ 4</span>
+          <div style="font-size: 0.8rem; color: var(--text-secondary);" id="exam-display-student-info">ผู้เข้าสอบ: เด็กชายสมชาย ใจดี (ชั้น ม.2/1)</div>
+        </div>
+      </div>
+      <div style="display: flex; align-items: center; gap: 1rem;">
+        <!-- Violation counter indicator -->
+        <div id="exam-violations-badge" style="background: rgba(230, 57, 70, 0.15); border: 1px solid var(--danger-color); color: var(--danger-color); padding: 0.4rem 0.8rem; border-radius: 6px; font-weight: 600; font-size: 0.85rem;">
+          <i class="fa-solid fa-triangle-exclamation"></i> สลับหน้าจอ: 0/3 ครั้ง
+        </div>
+        <div class="user-badge">
+          <div class="user-badge-icon"></div>
+          <span>ระบบป้องกันคุ้มครองอยู่</span>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Left: Questions, Right: Timer & Navigation -->
+    <div class="exam-layout">
+      <!-- Questions Container -->
+      <div class="exam-content">
+        <div id="exam-questions-list">
+          <!-- Questions will be rendered dynamically here -->
+        </div>
+      </div>
+      
+      <!-- Right Sidebar -->
+      <div class="exam-sidebar">
+        <div>
+          <div class="form-label" style="text-align: center; margin-bottom: 0.5rem;"><i class="fa-regular fa-clock"></i> เวลาที่เหลือในการสอบ</div>
+          <div id="exam-timer" class="timer-box">60:00</div>
+        </div>
+        
+        <div>
+          <div class="form-label" style="margin-bottom: 0.5rem;"><i class="fa-solid fa-list-ol"></i> สรุปคำตอบ (Question Navigator)</div>
+          <div id="exam-nav-grid" class="questions-nav">
+            <!-- Nav buttons generated dynamically -->
+          </div>
+        </div>
+        
+        <div style="margin-top: auto;">
+          <button class="btn btn-danger" id="btn-submit-exam"><i class="fa-solid fa-paper-plane"></i> ส่งกระดาษคำตอบ</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 5. Exam Suspended / Locked Screen (Very Serious) -->
+  <div id="screen-locked" class="lock-screen-wrapper hidden">
+    <div class="lock-box">
+      <i class="fa-solid fa-user-lock lock-icon"></i>
+      <h1 class="lock-title">การทำข้อสอบถูกระงับ (Exam Suspended)</h1>
+      <p class="lock-desc" id="lock-reason-desc">ระบบได้ตรวจพบการละเมิดกฎความปลอดภัยครบ 3 ครั้ง (เช่น สลับหน้าจอ, เปิดแท็บอื่น หรือพยายามคัดลอกข้อสอบ)</p>
+      
+      <div class="form-label" style="color: #ffb3b8; text-align: left;"><i class="fa-solid fa-receipt"></i> บันทึกเหตุการณ์ทำผิดกฎ (Violation Logs):</div>
+      <div id="lock-violations-list" class="violation-logs-list">
+        <!-- Logs populated dynamically -->
+      </div>
+      
+      <div class="unlock-status-message">
+        <i class="fa-solid fa-spinner fa-spin" style="color: var(--accent-color);"></i>
+        <span>กำลังรออาจารย์คุมสอบทำการปลดล็อกระบบสอบจากระยะไกล...</span>
+      </div>
+      
+      <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 1.5rem;">
+        * เมื่อครูผู้คุมสอบกดยืนยันปลดล็อกในระบบ หน้าจอนี้จะกลับเข้าสู่ข้อสอบปัจจุบันทันทีโดยไม่ต้องทำการรีเฟรชหน้าจอ
+      </div>
+    </div>
+  </div>
+
+  <!-- 6. Teacher Portal Dashboard Screen -->
+  <div id="screen-teacher-dashboard" class="screen hidden">
+    <!-- Topbar -->
+    <div class="app-topbar w-full" style="border-radius: 12px; margin-bottom: 1.5rem;">
+      <div style="display: flex; align-items: center; gap: 1rem;">
+        <svg style="width: 40px; height: 40px;" viewBox="0 0 100 100">
+          <circle cx="50" cy="50" r="45" fill="#1b4d3e" stroke="#d4af37" stroke-width="3"/>
+          <path d="M50,15 C55,30 65,35 65,50 C65,65 50,75 50,85" stroke="#d4af37" stroke-width="2"/>
+        </svg>
+        <div>
+          <h3 style="font-size: 1.1rem;" id="teacher-display-name">คุณครูสมศรี มั่งมี</h3>
+          <span style="font-size: 0.8rem; color: var(--accent-color);">แผงควบคุมระบบคุมสอบโรงเรียนโคกสีวิทยาสรรค์</span>
+        </div>
+      </div>
+      <button class="btn btn-danger btn-action" id="btn-teacher-logout" style="width: auto;"><i class="fa-solid fa-right-from-bracket"></i> ออกจากระบบ</button>
+    </div>
+    
+    <!-- Tab Controls -->
+    <div class="tabs-nav w-full">
+      <button class="tab-link active" data-target="tab-live-monitor"><i class="fa-solid fa-tv"></i> คุมสอบเรียลไทม์ & ปลดล็อก</button>
+      <button class="tab-link" data-target="tab-timetable"><i class="fa-solid fa-calendar-days"></i> จัดการตารางสอบ & ข้อสอบ</button>
+      <button class="tab-link" data-target="tab-students"><i class="fa-solid fa-users"></i> นำเข้าข้อมูลนักเรียน (Excel)</button>
+      <button class="tab-link" data-target="tab-teachers"><i class="fa-solid fa-user-gear"></i> บัญชีครู</button>
+      <button class="tab-link" data-target="tab-db-settings"><i class="fa-solid fa-sliders"></i> ตั้งค่าฐานข้อมูล</button>
+    </div>
+    
+    <!-- TAB 1: Live Exam Monitor -->
+    <div id="tab-live-monitor" class="tab-content w-full">
+      <div class="dashboard-grid">
+        <div class="stat-card">
+          <i class="fa-solid fa-user-clock stat-icon"></i>
+          <div>
+            <div class="stat-value" id="stat-active-students">0</div>
+            <div class="stat-label">กำลังสอบอยู่</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <i class="fa-solid fa-user-lock stat-icon" style="color: var(--danger-color);"></i>
+          <div>
+            <div class="stat-value" id="stat-locked-students">0</div>
+            <div class="stat-label">ถูกระงับ (Locked)</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <i class="fa-solid fa-circle-check stat-icon" style="color: var(--success-color);"></i>
+          <div>
+            <div class="stat-value" id="stat-submitted-students">0</div>
+            <div class="stat-label">ส่งคำตอบแล้ว</div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="glass-card">
+        <h3 style="margin-bottom: 1rem;"><i class="fa-solid fa-desktop" style="color: var(--success-color);"></i> รายชื่อผู้ทำข้อสอบออนไลน์สด (Live Session Monitor)</h3>
+        <div class="timetable-container" style="max-height: 500px;">
+          <table class="table-custom">
+            <thead>
+              <tr>
+                <th>เลขที่</th>
+                <th>รหัสประจำตัว</th>
+                <th>ชื่อ-นามสกุล</th>
+                <th>ระดับชั้น/ห้อง</th>
+                <th>วิชาสอบ</th>
+                <th>เตือน (สลับจอ)</th>
+                <th>สถานะการสอบ</th>
+                <th>การดำเนินงาน (Action)</th>
+              </tr>
+            </thead>
+            <tbody id="live-sessions-body">
+              <!-- Populated dynamically with active exam states -->
+              <tr>
+                <td colspan="8" style="color: var(--text-muted); padding: 2rem;">ไม่มีนักเรียนกำลังทำข้อสอบในขณะนี้</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    
+    <!-- TAB 2: Timetable & Exam Management -->
+    <div id="tab-timetable" class="tab-content w-full hidden">
+      <div style="display: grid; grid-template-columns: 350px 1fr; gap: 1.5rem; align-items: start;">
+        <!-- Left: Form to Add/Edit Exam -->
+        <div class="glass-card" style="padding: 1.5rem;">
+          <h3 id="exam-form-title" style="margin-bottom: 1rem; color: var(--accent-color);"><i class="fa-solid fa-plus-circle"></i> เพิ่มตารางสอบ</h3>
+          <form id="form-manage-exam">
+            <input type="hidden" id="manage-exam-id">
+            <div class="form-group">
+              <label class="form-label">วันที่สอบ</label>
+              <input type="date" id="exam-date" class="form-control" required>
+            </div>
+            <div class="form-group" style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
+              <div>
+                <label class="form-label">เวลาเริ่ม</label>
+                <input type="time" id="exam-start-time" class="form-control" placeholder="08:30" required>
+              </div>
+              <div>
+                <label class="form-label">เวลาสิ้นสุด</label>
+                <input type="time" id="exam-end-time" class="form-control" placeholder="09:30" required>
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">ระยะเวลาสอบ (นาที)</label>
+              <input type="number" id="exam-duration" class="form-control" placeholder="60" required>
+            </div>
+            <div class="form-group" style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
+              <div>
+                <label class="form-label">รหัสวิชา</label>
+                <input type="text" id="exam-subject-code" class="form-control" placeholder="ค22102" required>
+              </div>
+              <div>
+                <label class="form-label">ระดับชั้น</label>
+                <select id="exam-grade" class="form-control" required>
+                  <option value="ม.1">ม.1</option>
+                  <option value="ม.2">ม.2</option>
+                  <option value="ม.3">ม.3</option>
+                  <option value="ม.4">ม.4</option>
+                  <option value="ม.5">ม.5</option>
+                  <option value="ม.6">ม.6</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">ชื่อวิชา</label>
+              <input type="text" id="exam-subject-name" class="form-control" placeholder="คณิตศาสตร์ 4" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">ห้องสอบ / หมายเหตุ</label>
+              <input type="text" id="exam-room" class="form-control" placeholder="ม.2/1 ห้อง 326" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">ประเภทข้อสอบ</label>
+              <select id="exam-type" class="form-control">
+                <option value="online">Online (ลิงก์ทำในระบบ)</option>
+                <option value="paper">Paper (สอบกระดาษคำตอบ)</option>
+              </select>
+            </div>
+            
+            <div id="online-exam-upload-section" class="form-group">
+              <label class="form-label">ข้อสอบออนไลน์ (.docx)</label>
+              <div class="upload-zone" style="padding: 1.25rem 1rem;">
+                <i class="fa-regular fa-file-word upload-icon" style="font-size: 1.8rem;"></i>
+                <div style="font-size: 0.85rem;" id="docx-upload-status">อัปโหลดไฟล์ข้อสอบเวิร์ดเพื่อแปลงระบบสอบ</div>
+                <input type="file" id="docx-file-input" class="upload-input" accept=".docx">
+              </div>
+              <!-- Hidden array placeholder for storing parsed questions -->
+              <input type="hidden" id="parsed-questions-json">
+            </div>
+            
+            <div style="display: flex; gap: 0.5rem; margin-top: 1.5rem;">
+              <button type="submit" class="btn btn-primary"><i class="fa-solid fa-floppy-disk"></i> บันทึกตาราง</button>
+              <button type="button" id="btn-reset-exam-form" class="btn btn-secondary">ยกเลิก</button>
+            </div>
+          </form>
+        </div>
+        
+        <!-- Right: Timetable Schedule Table List -->
+        <div class="glass-card" style="padding: 1.5rem;">
+          <div class="flex-between" style="margin-bottom: 1rem;">
+            <h3><i class="fa-solid fa-table-list" style="color: var(--accent-color);"></i> รายการตารางสอบทั้งหมด</h3>
+            <div style="display: flex; gap: 0.5rem;">
+              <select id="filter-exam-grade" class="form-control" style="width: auto; padding: 0.4rem 1rem;">
+                <option value="all">ทุกระดับชั้น</option>
+                <option value="ม.1">ม.1</option>
+                <option value="ม.2">ม.2</option>
+                <option value="ม.3">ม.3</option>
+              </select>
+            </div>
+          </div>
+          
+          <div class="timetable-container">
+            <table class="table-custom">
+              <thead>
+                <tr>
+                  <th>ระดับชั้น</th>
+                  <th>วันที่</th>
+                  <th>เวลา</th>
+                  <th>รหัสวิชา</th>
+                  <th>ชื่อวิชา</th>
+                  <th>ห้องสอบ</th>
+                  <th>ประเภท</th>
+                  <th>จัดการ</th>
+                </tr>
+              </thead>
+              <tbody id="admin-exams-table-body">
+                <!-- Exam rows populated dynamically -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- TAB 3: Student Excel Import -->
+    <div id="tab-students" class="tab-content w-full hidden">
+      <div class="glass-card" style="max-width: 800px; margin: 0 auto;">
+        <h3><i class="fa-regular fa-file-excel" style="color: var(--success-color);"></i> นำเข้าบัญชีนักเรียนผ่านไฟล์ Excel</h3>
+        <p style="color: var(--text-secondary); margin-bottom: 1.5rem; font-size: 0.95rem;">
+          ระบบจะทำการอ่านระดับชั้นและจัดกลุ่มแยกห้องให้อัตโนมัติ โดยอ้างอิงรหัสประจำตัวเป็น Username และรหัสผ่านเริ่มต้นสำหรับการเข้าสอบ
+        </p>
+        
+        <!-- Excel Upload Area -->
+        <div class="upload-zone" style="margin-bottom: 2rem;">
+          <i class="fa-solid fa-cloud-arrow-up upload-icon"></i>
+          <h3>คลิกเพื่ออัปโหลด หรือลากไฟล์ ใบรายชื่อนักเรียน.xls หรือ .xlsx มาที่นี่</h3>
+          <p style="color: var(--text-muted); font-size: 0.85rem; margin-top: 0.5rem;">ระบบรองรับรูปแบบตารางรายชื่อราชการแบบรวมหลายห้องแนวตั้ง</p>
+          <input type="file" id="excel-file-input" class="upload-input" accept=".xls,.xlsx">
+        </div>
+        
+        <!-- Import Statistics and Results Preview -->
+        <div id="excel-preview-section" class="hidden" style="margin-bottom: 2rem; background: rgba(255, 255, 255, 0.03); border: 1px solid var(--card-border); border-radius: 8px; padding: 1.5rem;">
+          <div class="flex-between" style="margin-bottom: 1rem;">
+            <h4 style="color: var(--accent-color);"><i class="fa-solid fa-list-check"></i> ตรวจสอบข้อมูลก่อนการบันทึกฐานข้อมูล</h4>
+            <span id="excel-import-stats" style="font-weight: 600;">แยกได้ทั้งสิ้น: 0 คน</span>
+          </div>
+          
+          <!-- Class rooms distribution badge counts -->
+          <div id="excel-rooms-badges" style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 1rem;">
+            <!-- Badge: ม.1/1 (30 คน) -->
+          </div>
+          
+          <div style="display: flex; gap: 0.5rem;">
+            <button class="btn btn-primary" id="btn-save-imported-students"><i class="fa-solid fa-cloud-arrow-up"></i> ยืนยันบันทึกลงฐานข้อมูล</button>
+            <button class="btn btn-secondary" id="btn-cancel-imported-students">ยกเลิก</button>
+          </div>
+        </div>
+        
+        <!-- Database statistics details -->
+        <div class="flex-between" style="border-top: 1px solid var(--card-border); padding-top: 1.5rem; margin-top: 2rem;">
+          <div>
+            <h4>สถิตินักเรียนในฐานข้อมูลปัจจุบัน:</h4>
+            <div style="font-size: 1.1rem; font-weight: 700; color: var(--accent-color); margin-top: 0.5rem;" id="db-total-students-count">0 คน</div>
+          </div>
+          <button class="btn btn-danger" id="btn-clear-student-db" style="width: auto;"><i class="fa-solid fa-trash-can"></i> ล้างฐานข้อมูลนักเรียนทั้งหมด</button>
+        </div>
+      </div>
+    </div>
+    
+    <!-- TAB 4: Teacher Accounts Management -->
+    <div id="tab-teachers" class="tab-content w-full hidden">
+      <div style="display: grid; grid-template-columns: 350px 1fr; gap: 1.5rem; align-items: start;">
+        <!-- Add Teacher Form -->
+        <div class="glass-card">
+          <h3><i class="fa-solid fa-user-plus"></i> เพิ่มบัญชีครูคุมสอบ</h3>
+          <p style="color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 1.25rem;">ครูทุกคนมีสิทธิ์เข้าหน้าจอหลักนี้และสั่งปลดล็อกระบบสอบของนักเรียนได้ทั้งหมด</p>
+          
+          <form id="form-manage-teacher">
+            <div class="form-group">
+              <label class="form-label">ชื่อผู้ใช้ (Username)</label>
+              <input type="text" id="new-teacher-username" class="form-control" placeholder="เช่น somchai" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">รหัสผ่าน (Password)</label>
+              <input type="password" id="new-teacher-password" class="form-control" placeholder="กรอกรหัสผ่าน" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">ชื่อ-นามสกุล</label>
+              <input type="text" id="new-teacher-name" class="form-control" placeholder="เช่น ครูสมชาย ใจดี" required>
+            </div>
+            <button type="submit" class="btn btn-accent"><i class="fa-solid fa-user-plus"></i> บันทึกบัญชีครู</button>
+          </form>
+        </div>
+        
+        <!-- Teachers list table -->
+        <div class="glass-card">
+          <h3><i class="fa-solid fa-address-book"></i> รายชื่อบัญชีผู้คุมสอบทั้งหมด</h3>
+          <div class="timetable-container">
+            <table class="table-custom">
+              <thead>
+                <tr>
+                  <th>ชื่อผู้ใช้ (Username)</th>
+                  <th>ชื่อ-นามสกุล (Name)</th>
+                  <th>รหัสผ่าน (Password)</th>
+                  <th>จัดการ</th>
+                </tr>
+              </thead>
+              <tbody id="teachers-table-body">
+                <!-- Teachers entries populated dynamically -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- TAB 5: Firebase Database Configuration -->
+    <div id="tab-db-settings" class="tab-content w-full hidden">
+      <div class="glass-card" style="max-width: 600px; margin: 0 auto;">
+        <h3><i class="fa-solid fa-sliders" style="color: var(--accent-color);"></i> การเชื่อมต่อฐานข้อมูล Firebase</h3>
+        <p style="color: var(--text-secondary); margin-bottom: 1.5rem; font-size: 0.9rem;">
+          คุณสามารถแก้ไขข้อมูลเชื่อมต่อ หรือโอนย้ายระบบสอบออนไลน์นี้ไปยังโปรเจกต์ Firebase ตัวอื่นได้
+        </p>
+        
+        <form id="tab-config-form">
+          <div class="form-group">
+            <label class="form-label">API Key</label>
+            <input type="text" id="tab-config-apiKey" class="form-control" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Auth Domain</label>
+            <input type="text" id="tab-config-authDomain" class="form-control" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Project ID</label>
+            <input type="text" id="tab-config-projectId" class="form-control" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Storage Bucket</label>
+            <input type="text" id="tab-config-storageBucket" class="form-control" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Messaging Sender ID</label>
+            <input type="text" id="tab-config-messagingSenderId" class="form-control" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">App ID</label>
+            <input type="text" id="tab-config-appId" class="form-control" required>
+          </div>
+          <div style="display: flex; gap: 0.5rem; margin-top: 1.5rem;">
+            <button type="submit" class="btn btn-accent"><i class="fa-solid fa-arrows-rotate"></i> อัปเดตการตั้งค่า</button>
+            <button type="button" id="btn-reset-db-entirely" class="btn btn-danger"><i class="fa-solid fa-triangle-exclamation"></i> ล้างการเชื่อมต่อทั้งหมด</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- 7. Interactive Docx Question Review Modal -->
+  <div id="modal-docx-preview" class="warning-modal-backdrop hidden" style="backdrop-filter: blur(12px);">
+    <div class="glass-card" style="max-width: 900px; width: 95%; height: 85vh; display: flex; flex-direction: column; padding: 2rem;">
+      <div class="flex-between" style="border-bottom: 1px solid var(--card-border); padding-bottom: 0.75rem; margin-bottom: 1rem;">
+        <h3 style="color: var(--accent-color);"><i class="fa-solid fa-list-check"></i> ตรวจสอบข้อสอบที่แปลงจากเอกสาร Word (.docx)</h3>
+        <button id="btn-close-docx-modal" class="btn-icon" style="font-size: 1.5rem;"><i class="fa-solid fa-circle-xmark"></i></button>
+      </div>
+      
+      <div class="config-info" style="margin-bottom: 1rem;">
+        <i class="fa-solid fa-lightbulb"></i> ระบบตรวจคำตอบอัตโนมัติจาก <b>ตัวหนา (Bold)</b> หรือ <b>ตัวขีดเส้นใต้ (Underline)</b> คุณครูสามารถปรับปรุงข้อความ คำตอบ และเลือกข้อเฉลยที่ถูกต้องได้จากแผงควบคุมนี้ก่อนนำไปใช้งานสอบจริง
+      </div>
+      
+      <!-- List of questions editable form -->
+      <div id="docx-parsed-questions-list" class="preview-questions-list" style="flex: 1;">
+        <!-- Filled dynamically with editable templates -->
+      </div>
+      
+      <div style="display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 1.5rem; border-top: 1px solid var(--card-border); padding-top: 1rem;">
+        <button id="btn-add-question-manually" class="btn btn-secondary" style="width: auto;"><i class="fa-solid fa-plus"></i> เพิ่มข้อสอบใหม่</button>
+        <button id="btn-save-docx-questions" class="btn btn-primary" style="width: auto;"><i class="fa-solid fa-clipboard-check"></i> บันทึกข้อสอบทั้งหมดลงในวิชา</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 8. Student Warning Modal Dialog (Intermediate Violations) -->
+  <div id="modal-warning" class="warning-modal-backdrop hidden">
+    <div id="warning-modal-content" class="warning-modal-content">
+      <i class="fa-solid fa-triangle-exclamation warning-modal-icon"></i>
+      <h3 id="warning-modal-title" class="warning-modal-title">ตรวจพบพฤติกรรมสุ่มเสี่ยงทุจริต!</h3>
+      <p id="warning-modal-desc" class="warning-modal-body">ท่านได้ทำการสลับแท็บบราวเซอร์ ย่อขนาดหน้าต่าง หรือเปิดแอปพลิเคชันอื่นนอกเหนือระบบสอบ ซึ่งถือเป็นพฤติกรรมการทำผิดกฎ</p>
+      <div id="warning-modal-count" class="warning-count-alert">การละเมิดกฎครั้งที่: 1 / 3 ครั้ง</div>
+      <button class="btn btn-danger" id="btn-ack-warning">ฉันเข้าใจแล้วและจะไม่ทำอีก</button>
+    </div>
+  </div>
+
+  <!-- 9. Student Docx Question Viewer Confirmation (For submitting) -->
+  <div id="modal-confirm-submit" class="warning-modal-backdrop hidden">
+    <div class="warning-modal-content" style="border-color: var(--accent-color); background: #0c1511;">
+      <i class="fa-solid fa-circle-question warning-modal-icon" style="color: var(--accent-color);"></i>
+      <h3 class="warning-modal-title">ยืนยันส่งข้อสอบ?</h3>
+      <p class="warning-modal-body">กรุณาตรวจสอบว่าท่านได้ตอบคำถามครบถ้วนแล้ว เมื่อยืนยันการส่งข้อสอบ จะไม่สามารถกลับมาแก้ไขได้อีก</p>
+      <div id="submit-confirm-unanswered" style="color: var(--warning-color); font-weight: 600; margin-bottom: 1.5rem;">
+        มีข้อที่ยังไม่ได้ทำอีก: 0 ข้อ
+      </div>
+      <div style="display: flex; gap: 0.5rem;">
+        <button class="btn btn-primary" id="btn-confirm-submit-ok">ยืนยันส่งข้อสอบ</button>
+        <button class="btn btn-secondary" id="btn-confirm-submit-cancel">ยกเลิก</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- External Library Dependencies -->
+  <!-- 1. Firebase compatibility V8 libraries -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+  <!-- 2. SheetJS for xls/xlsx parsing -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <!-- 3. Mammoth.js for docx parsing -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+
+  <!-- Main Application Script (ES Module) -->
+  <script type="module" src="app.js"></script>
+</body>
+</html>
